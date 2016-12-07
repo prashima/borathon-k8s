@@ -53,7 +53,6 @@ ruby/common/test_files/deployment/dcmap.yml
 java/containers/photon-controller-core/*.rpm
 java/.gradle/
 java/buildSrc/.gradle
-**/gradle/
 **/.gradle/
 **/bin/
 **/test-output/
@@ -61,3 +60,6 @@ java/buildSrc/.gradle
 *.settings
 *.classpath
 .DS_Store
+java/api-mock/gradle/
+java/vcs/gradle/
+java/vsphere-client/gradle/
