@@ -27,6 +27,7 @@ import com.vmware.vim25.SnapshotFaultFaultMsg;
 import com.vmware.vim25.TaskInProgressFaultMsg;
 import com.vmware.vim25.VmConfigFaultFaultMsg;
 import com.vmware.vsphere.client.commands.PutVMFiles;
+import com.vmware.vsphere.client.commands.ResourcePoolManager;
 import com.vmware.vsphere.client.commands.VMCreate;
 import com.vmware.vsphere.client.commands.VMCreateFromImage;
 import com.vmware.vsphere.client.commands.VMCreateWithExistingDisk;
@@ -140,5 +141,10 @@ public class CommandExecutor {
 		mountCd.setConnect("true");
 		mountCd.setStartConnected("true");
 		mountCd.doOperation();
+	}
+
+	public static String createResourcePool(String tenantName, String clusterResPoolMoId, long cpuRes, long cpuLim, long memRes, long memLim)
+			throws Exception {
+		return new ResourcePoolManager().createResoucePool(tenantName, clusterResPoolMoId, cpuRes, cpuLim, memRes, memLim);
 	}
 }

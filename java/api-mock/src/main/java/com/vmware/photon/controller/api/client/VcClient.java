@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.util.concurrent.FutureCallback;
 import com.vmware.photon.controller.api.model.NetworkConnection;
+import com.vmware.photon.controller.api.model.ResourcePoolConfig;
 import com.vmware.photon.controller.api.model.Task;
 import com.vmware.photon.controller.api.model.Task.Entity;
 import com.vmware.photon.controller.api.model.VmCreateSpec;
@@ -110,5 +111,16 @@ public class VcClient {
 		logger.info("Successfully got network details for VM {}", vmId);
 		// TODO Auto-generated method stub
 		
+	}
+
+	public String createResourcePool(String tenantName, ResourcePoolConfig resPoolConfig) {
+		logger.info("Creating tenant in cluster {}", resPoolConfig.getResMoRef());
+		try {
+			return CommandExecutor.createResourcePool(tenantName, resPoolConfig.getResMoRef(),
+					resPoolConfig.getCpuReservationsInMHz(), resPoolConfig.getCpuLimitsInMHz(), resPoolConfig.getMemReservationsInMB(), resPoolConfig.getMemLimitsInMB());
+		} catch (Exception e) {
+			logger.error("Exception occurred", e);
+			throw new RuntimeException(e);
+		}
 	}
 }

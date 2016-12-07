@@ -1,13 +1,13 @@
-package com.vmware.photon.controller.clustermanager.servicedocuments;
+package com.vmware.photon.controller.api.model;
 
-public class ResourceAllocationSpec {
+public class ResourcePoolConfig {
 	private String resMoRef;
-	private String tenantResourcePoolMoId;
 	private long cpuReservationsInMHz;
 	private long cpuLimitsInMHz;
 	private long memReservationsInMB;
 	private long memLimitsInMB;
 	private long diskSpaceInMB;
+	
 	public long getCpuReservationsInMHz() {
 		return cpuReservationsInMHz;
 	}
@@ -44,11 +44,4 @@ public class ResourceAllocationSpec {
 	public void setResMoRef(String resMoRef) {
 		this.resMoRef = resMoRef;
 	}
-	public String getTenantResourcePoolMoId() {
-		return tenantResourcePoolMoId;
-	}
-	public void setTenantResourcePoolMoId(String tenantResourcePoolMoId) {
-		this.tenantResourcePoolMoId = tenantResourcePoolMoId;
-	}
-
 }
