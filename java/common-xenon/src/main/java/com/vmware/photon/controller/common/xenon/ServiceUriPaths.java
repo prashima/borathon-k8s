@@ -46,6 +46,8 @@ public class ServiceUriPaths extends com.vmware.xenon.services.common.ServiceUri
 
   public static final String VCS_CLUSTER_CREATE =
 	      CLUSTERMANAGER_ROOT + "/vcs-cluster-create";
+  public static final String VCS_TENANT =
+		  SERVICES_ROOT + "/tenant";
 
 
   public static final String MESOS_CLUSTER_CREATE_TASK_SERVICE =
