@@ -1,0 +1,63 @@
+# VIM
+.*.s[a-w][a-z]
+*.un~
+Session.vim
+.netrwhist
+
+# Emacs
+*~
+\#*\#
+
+# IDEA
+.idea
+*.iml
+*.ipr
+*.iws
+*.ids
+
+# Local Dev DB
+mem.h2.db
+mem.trace.db
+
+# cscope, ctags
+cscope.files
+cscope.in.out
+cscope.out
+cscope.po.out
+tags
+
+
+.ruby
+*.gem
+
+tmp/
+ruby/common/test_files/deployment/dcmap.yml
+
+*.gem
+
+
+**/build/
+**/archive/
+**/packer_cache/
+*.tgz
+*.tar
+*.gz
+*.ova
+*.iso
+*.box
+.vagrant
+.bundle
+.gradle
+.project
+.settings
+java/containers/photon-controller-core/*.rpm
+java/.gradle/
+java/buildSrc/.gradle
+**/gradle/
+**/.gradle/
+**/bin/
+**/test-output/
+*.project
+*.settings
+*.classpath
+.DS_Store

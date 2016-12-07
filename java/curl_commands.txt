@@ -1,0 +1,3 @@
+curl -X POST -H "Content-type: application/json" -d '{"documentSelfLink":"cluster-1","name":"sandeep-1"}' http://127.0.0.1:19000/vcs/clustermanager/kubernetes-cluster-create-tasks
+
+curl -X POST -H "Content-type: application/json" --data-binary @clusterState.json http://127.0.0.1:19000/vcs/cloudstore/clusters
