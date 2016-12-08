@@ -52,7 +52,7 @@ public class GeneralApiClient {
 									vms.add(getVm(vmTask));
 									break;
 								}
-							}							
+							}
 						}
 					}
 					callback.onSuccess(vms);
