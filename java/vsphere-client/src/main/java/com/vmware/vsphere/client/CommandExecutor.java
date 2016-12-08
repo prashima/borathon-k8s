@@ -41,8 +41,10 @@ public class CommandExecutor {
 	public static Map<String, String> createVm(Map<String, String> args) {
 		Map<String, String> output = new HashMap<>();
 		String vmname = args.get(CommandArgument.VM_NAME);
+		String resPool = args.get(CommandArgument.RES_POOL);
 		VMCreateFromImage vmCreate = new VMCreateFromImage();
 		vmCreate.setVmname(vmname);
+		vmCreate.setResPool(resPool);
 
 			try {
 				output.put(CommandOutput.VM_MOREF, vmCreate.createVmFromImage());

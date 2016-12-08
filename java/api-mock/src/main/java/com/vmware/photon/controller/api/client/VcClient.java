@@ -37,6 +37,7 @@ public class VcClient {
 		logger.info("Creating VM in project {} with specification {}", projectId, composeVmCreateSpec);
 		Map<String, String> args = new HashMap<>();
 		args.put(CommandArgument.VM_NAME, composeVmCreateSpec.getName());
+		args.put(CommandArgument.RES_POOL, composeVmCreateSpec.getTenantResourcePool());
 		Map<String, String> output = CommandExecutor.createVm(args);
 
 		Task vmCreateTask = new Task();

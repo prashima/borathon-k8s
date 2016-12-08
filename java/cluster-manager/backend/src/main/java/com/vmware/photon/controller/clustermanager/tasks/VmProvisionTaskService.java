@@ -20,6 +20,7 @@ import com.vmware.photon.controller.api.model.Task;
 import com.vmware.photon.controller.api.model.VmCreateSpec;
 import com.vmware.photon.controller.clustermanager.servicedocuments.ClusterManagerConstants;
 import com.vmware.photon.controller.clustermanager.servicedocuments.FileTemplate;
+import com.vmware.photon.controller.clustermanager.servicedocuments.TenantSpec;
 import com.vmware.photon.controller.clustermanager.utils.ApiUtils;
 import com.vmware.photon.controller.clustermanager.utils.HostUtils;
 import com.vmware.photon.controller.clustermanager.utils.ScriptRunner;
@@ -30,12 +31,16 @@ import com.vmware.photon.controller.common.xenon.ServiceUtils;
 import com.vmware.photon.controller.common.xenon.TaskUtils;
 import com.vmware.photon.controller.common.xenon.ValidationUtils;
 import com.vmware.photon.controller.common.xenon.deployment.NoMigrationDuringDeployment;
+import com.vmware.photon.controller.common.xenon.exceptions.BadRequestException;
+import com.vmware.photon.controller.common.xenon.exceptions.DocumentNotFoundException;
 import com.vmware.photon.controller.common.xenon.migration.NoMigrationDuringUpgrade;
 import com.vmware.photon.controller.common.xenon.validation.DefaultInteger;
 import com.vmware.photon.controller.common.xenon.validation.DefaultTaskState;
 import com.vmware.photon.controller.common.xenon.validation.Immutable;
 import com.vmware.photon.controller.common.xenon.validation.NotNull;
 import com.vmware.photon.controller.common.xenon.validation.WriteOnce;
+import com.vmware.photon.controller.mockcloudstore.xenon.entity.ClusterServiceFactory;
+import com.vmware.photon.controller.xenon.client.VcsXenonRestClient;
 import com.vmware.xenon.common.Operation;
 import com.vmware.xenon.common.Service;
 import com.vmware.xenon.common.ServiceDocument;
@@ -62,6 +67,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeoutException;
 
 /**
  * This class implements a Xenon service representing a task to provision a VM.
@@ -186,20 +192,31 @@ public class VmProvisionTaskService extends StatefulService {
     try {
       HostUtils.getVcClient().createVmAsync(
           currentState.projectId,
-          composeVmCreateSpec(currentState),
+          composeVmCreateSpec(currentState.projectId, currentState),
           callback);
     } catch (Throwable ex) {
       failTask(ex);
     }
   }
 
-  private VmCreateSpec composeVmCreateSpec(final State currentState) {
+  private VmCreateSpec composeVmCreateSpec(final String tenantId, final State currentState) {
+	  
+	TenantSpec tenantSpec = null;
+	try {
+		Operation op = VcsXenonRestClient.getVcsRestClient().get(
+		            VcsTenantFactoryService.SELF_LINK + "/" + tenantId);
+		tenantSpec = op.getBody(TenantSpec.class);
+	} catch (Throwable t) {
+		t.printStackTrace();
+		failTask(t);
+	}
 
     VmCreateSpec spec = new VmCreateSpec();
     spec.setName(currentState.vmName);
     spec.setFlavor(currentState.vmFlavorName);
     spec.setTags(currentState.vmTags);
     spec.setSourceImageId(currentState.imageId);
+    spec.setTenantResourcePool(tenantSpec.getRes()[0].getTenantResourcePoolMoId());
 
     if (currentState.vmNetworkId != null) {
       List<String> networks = new ArrayList<>();

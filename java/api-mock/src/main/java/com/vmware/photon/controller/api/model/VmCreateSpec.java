@@ -39,6 +39,7 @@ public class VmCreateSpec implements Flavorful, Named {
   private Map<String, String> environment = new HashMap<>();
   //private List<LocalitySpec> affinities = new ArrayList<>();
   private List<String> subnets;
+  private String tenantResourcePool;
 
   public String getKind() {
     return KIND;
@@ -140,5 +141,13 @@ public class VmCreateSpec implements Flavorful, Named {
   public String toString() {
     return String.format("%s, %s", name, flavor);
   }
+
+public String getTenantResourcePool() {
+	return tenantResourcePool;
+}
+
+public void setTenantResourcePool(String tenantResourcePool) {
+	this.tenantResourcePool = tenantResourcePool;
+}
 
 }

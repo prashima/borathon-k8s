@@ -45,6 +45,7 @@ public class VMLinkedClone extends BaseCommand {
     String cloneName;
     String virtualMachineName;
     String snapshotName;
+    String targetResourcePool;
 
     public void setVirtualMachineName(String virtualMachineName) {
         this.virtualMachineName = virtualMachineName;
@@ -56,6 +57,10 @@ public class VMLinkedClone extends BaseCommand {
 
     public void setCloneName(String cloneName) {
         this.cloneName = cloneName;
+    }
+    
+    public void setTargetResourcePool(String targetResourcePool) {
+    	this.targetResourcePool = targetResourcePool;
     }
 
     /**
@@ -109,6 +114,10 @@ public class VMLinkedClone extends BaseCommand {
                         getIndependenetVirtualDiskKeys(vmMOR);
 
                 VirtualMachineRelocateSpec rSpec = new VirtualMachineRelocateSpec();
+                ManagedObjectReference targetResourcePoolMoRef = new ManagedObjectReference();
+                targetResourcePoolMoRef.setType("ResourcePool");
+                targetResourcePoolMoRef.setValue(targetResourcePool);
+                rSpec.setPool(targetResourcePoolMoRef);
                 if (independentVirtualDiskKeys.size() > 0) {
                     List<ManagedObjectReference> ds =
                             ((ArrayOfManagedObjectReference) vcService.getGetMOREFs().entityProps(vmMOR,

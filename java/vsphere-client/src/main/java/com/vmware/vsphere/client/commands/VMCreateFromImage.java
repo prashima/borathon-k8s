@@ -31,9 +31,14 @@ public class VMCreateFromImage extends BaseCommand {
 	// private static final String KUBERNETES_IMAGE_SNAPSHOT = "vm1-snapshot";
 
 	private String vmname;
+	private String resPool;
 
 	public void setVmname(String vmname) {
 		this.vmname = vmname;
+	}
+	
+	public void setResPool(String resPool) {
+		this.resPool = resPool;
 	}
 
 	public String createVmFromImage() throws InvalidPropertyFaultMsg,
@@ -62,6 +67,7 @@ public class VMCreateFromImage extends BaseCommand {
 		vmLinkedClone.setVirtualMachineName(KUBERNETES_IMAGE_VM);
 		vmLinkedClone.setSnapshotName(KUBERNETES_IMAGE_SNAPSHOT);
 		vmLinkedClone.setCloneName(vmname);
+		vmLinkedClone.setTargetResourcePool(resPool);
 		String cloneMoRef = vmLinkedClone.createLinkedClone();
 		return cloneMoRef;
 	}
