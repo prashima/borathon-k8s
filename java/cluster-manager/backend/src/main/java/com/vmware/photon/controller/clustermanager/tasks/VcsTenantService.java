@@ -4,8 +4,10 @@ import com.vmware.xenon.common.Operation;
 import com.vmware.xenon.common.StatefulService;
 import com.vmware.photon.controller.api.client.VcClient;
 import com.vmware.photon.controller.api.model.ResourcePoolConfig;
+import com.vmware.photon.controller.clustermanager.VcsHelper;
 import com.vmware.photon.controller.clustermanager.servicedocuments.ResourceAllocationSpec;
 import com.vmware.photon.controller.clustermanager.servicedocuments.TenantSpec;
+import com.vmware.photon.controller.common.xenon.ServiceHostUtils;
 import com.vmware.photon.controller.common.xenon.ServiceUtils;
 
 public class VcsTenantService extends StatefulService {
@@ -20,6 +22,11 @@ public class VcsTenantService extends StatefulService {
 	@Override
 	public void handleStart(Operation start) {
 	    ServiceUtils.logInfo(this, "In VcsTenantService. Starting service %s", getSelfLink());
+	    try {
+	    	ServiceHostUtils.startService(VcsHelper.getServiceHost(), VcsTenantClusterQueryTask.class, getSelfLink() + "/clusters");
+	    } catch (Exception e) {
+	    	throw new RuntimeException(e);
+	    }
 	    TenantSpec spec = start.getBody(TenantSpec.class);
 	    spec.setId(getSelfLink().split("/")[3]);
 	    
@@ -34,6 +41,6 @@ public class VcsTenantService extends StatefulService {
 	    	resSpec.setTenantResourcePoolMoId(VcClient.getVcClient().createResourcePool(spec.getName(), resPoolConfig));
 	    }
 	    start.setBody(spec);
-	    start.complete();
+	    start.complete();	    
 	}
 }

@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.vmware.photon.controller.clustermanager.ClusterManagerFactory;
+import com.vmware.photon.controller.clustermanager.VcsHelper;
 import com.vmware.photon.controller.clustermanager.servicedocuments.ClusterManagerConstants;
 import com.vmware.photon.controller.common.clients.AgentControlClientFactory;
 import com.vmware.photon.controller.common.clients.HostClientFactory;
@@ -63,6 +64,8 @@ public class Main {
 
         serviceHost.initialize(arguments);
         serviceHost.start();
+        // Letting the cluster manager to know about the service host.
+        VcsHelper.setVcsHost(serviceHost);
         /**
         * Xenon currently uses a garbage collection algorithm for its Lucene index searchers which
         * results in index searchers being closed while still in use by paginated queries. As a
