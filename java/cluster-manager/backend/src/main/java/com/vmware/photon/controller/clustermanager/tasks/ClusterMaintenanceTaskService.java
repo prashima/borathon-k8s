@@ -15,6 +15,7 @@ package com.vmware.photon.controller.clustermanager.tasks;
 import com.vmware.photon.controller.api.model.ClusterState;
 import com.vmware.photon.controller.mockcloudstore.xenon.entity.ClusterService;
 import com.vmware.photon.controller.mockcloudstore.xenon.entity.ClusterServiceFactory;
+import com.vmware.photon.controller.xenon.client.GeneralApiClient;
 import com.vmware.photon.controller.clustermanager.servicedocuments.ClusterDeleteTask;
 import com.vmware.photon.controller.clustermanager.servicedocuments.ClusterManagerConstants;
 import com.vmware.photon.controller.clustermanager.utils.HostUtils;
@@ -35,7 +36,6 @@ import com.vmware.xenon.common.StatefulService;
 import com.vmware.xenon.common.TaskState;
 import com.vmware.xenon.common.UriUtils;
 import com.vmware.xenon.common.Utils;
-
 import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.Nullable;
@@ -67,7 +67,7 @@ public class ClusterMaintenanceTaskService extends StatefulService {
   public void handleStart(Operation startOperation) {
     ServiceUtils.logInfo(this, "Handling start operation for service %s", getSelfLink());
     State startState = startOperation.getBody(State.class);
-
+    //GeneralApiClient.getVmAsync("");
     InitializationUtils.initialize(startState);
     try {
     validateStartState(startState);
@@ -87,6 +87,7 @@ public class ClusterMaintenanceTaskService extends StatefulService {
     ServiceUtils.logInfo(this, "Handling patch operation for service %s", getSelfLink());
     State currentState = getState(patchOperation);
 
+    //GeneralApiClient.getVmAsync("");
     State patchState = patchOperation.getBody(State.class);
     validatePatchState(currentState, patchState);
 
@@ -299,6 +300,10 @@ public class ClusterMaintenanceTaskService extends StatefulService {
                   }
                 }
             ));
+  }
+
+  private void setupSlave() {
+	  
   }
 
   private void performGarbageInspection(final State currentState, final String clusterId) {

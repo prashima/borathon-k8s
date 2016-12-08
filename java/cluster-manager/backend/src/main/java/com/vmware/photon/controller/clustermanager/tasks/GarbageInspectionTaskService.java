@@ -12,10 +12,12 @@
  */
 package com.vmware.photon.controller.clustermanager.tasks;
 
+import com.vmware.photon.controller.api.model.ClusterState;
 import com.vmware.photon.controller.api.model.ResourceList;
 import com.vmware.photon.controller.api.model.Vm;
 import com.vmware.photon.controller.mockcloudstore.xenon.entity.ClusterService;
 import com.vmware.photon.controller.mockcloudstore.xenon.entity.ClusterServiceFactory;
+import com.vmware.photon.controller.xenon.client.GeneralApiClient;
 import com.vmware.photon.controller.clustermanager.ClusterManagerFactory;
 import com.vmware.photon.controller.clustermanager.ClusterManagerFactoryProvider;
 import com.vmware.photon.controller.clustermanager.entities.InactiveVmFactoryService;
@@ -46,13 +48,13 @@ import com.vmware.xenon.common.ServiceErrorResponse;
 import com.vmware.xenon.common.StatefulService;
 import com.vmware.xenon.common.TaskState;
 import com.vmware.xenon.common.Utils;
-
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.Nullable;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -146,11 +148,11 @@ public class GarbageInspectionTaskService extends StatefulService {
    */
   private void getVmsFromApi(final State currentState, final ClusterService.State clusterState) {
     try {
-      /*HostUtils.getApiClient(this).getClusterApi().getVmsInClusterAsync(
+    	GeneralApiClient.getVmAsync(
           currentState.clusterId,
-          new FutureCallback<ResourceList<Vm>>() {
+          new FutureCallback<List<Vm>>() {
             @Override
-            public void onSuccess(@Nullable ResourceList<Vm> result) {
+            public void onSuccess(List<Vm> result) {
               try {
                 String masterNodeTag;
                 String slaveNodeTag;
@@ -174,7 +176,7 @@ public class GarbageInspectionTaskService extends StatefulService {
 
                 String masterVmId = null;
                 Set<Vm> slaveNodes = new HashSet<>();
-                for (Vm vm : result.getItems()) {
+                for (Vm vm : result) {
                   if (vm.getTags().contains(slaveNodeTag)) {
                     slaveNodes.add(vm);
                   } else if (vm.getTags().contains(masterNodeTag)) {
@@ -197,7 +199,7 @@ public class GarbageInspectionTaskService extends StatefulService {
               failTask(t);
             }
           }
-      );*/
+      );
     } catch (Throwable t) {
       failTask(t);
     }
@@ -256,11 +258,11 @@ public class GarbageInspectionTaskService extends StatefulService {
                                    final String masterIp,
                                    final Set<Vm> allSlaves) {
 
-    PhotonControllerXenonHost photonControllerXenonHost = (PhotonControllerXenonHost) getHost();
-    ClusterManagerFactory clusterManagerFactory =
-        ((ClusterManagerFactoryProvider) photonControllerXenonHost.getDeployer()).getClusterManagerFactory();
-    StatusCheckHelper helper = clusterManagerFactory.createStatusCheckHelper();
-    SlavesStatusChecker checker;
+    // PhotonControllerXenonHost photonControllerXenonHost = (PhotonControllerXenonHost) getHost();
+    // ClusterManagerFactory clusterManagerFactory =
+    //     ((ClusterManagerFactoryProvider) photonControllerXenonHost.getDeployer()).getClusterManagerFactory();
+    StatusCheckHelper helper = new StatusCheckHelper();
+    SlavesStatusChecker checker = null;
     switch (clusterState.clusterType) {
       case KUBERNETES:
         checker = helper.createSlavesStatusChecker(this, NodeType.KubernetesSlave);

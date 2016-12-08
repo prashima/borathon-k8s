@@ -32,6 +32,8 @@ import com.vmware.vsphere.client.commands.VMCreate;
 import com.vmware.vsphere.client.commands.VMCreateFromImage;
 import com.vmware.vsphere.client.commands.VMCreateWithExistingDisk;
 import com.vmware.vsphere.client.commands.VMManageCD;
+import com.vmware.vsphere.client.commands.VmNetwork;
+import com.vmware.vsphere.client.commands.VmNetwork.Network;
 
 public class CommandExecutor {
 
@@ -148,5 +150,10 @@ public class CommandExecutor {
 	public static String createResourcePool(String tenantName, String clusterResPoolMoId, long cpuRes, long cpuLim, long memRes, long memLim)
 			throws Exception {
 		return new ResourcePoolManager().createResoucePool(tenantName, clusterResPoolMoId, cpuRes, cpuLim, memRes, memLim);
+    }	
+
+	public static Network getVmNetwork(String vmId) {
+		VmNetwork vmNetwork = new VmNetwork();
+		return vmNetwork.getNetworkWithRetry(vmId, 4, 1000);
 	}
 }

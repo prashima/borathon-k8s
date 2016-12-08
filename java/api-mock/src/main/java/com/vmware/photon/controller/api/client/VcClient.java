@@ -1,7 +1,5 @@
 package com.vmware.photon.controller.api.client;
 
-import static com.vmware.vsphere.client.config.VcClientProperties.INSTANCE;
-
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -21,6 +19,7 @@ import com.vmware.photon.controller.api.model.VmNetworks;
 import com.vmware.vsphere.client.CommandArgument;
 import com.vmware.vsphere.client.CommandExecutor;
 import com.vmware.vsphere.client.CommandOutput;
+import com.vmware.vsphere.client.commands.VmNetwork.Network;
 
 public class VcClient {
 	private static final Logger logger = LoggerFactory.getLogger(VcClient.class);
@@ -94,6 +93,8 @@ public class VcClient {
 
 	public void getNetworksAsync(String vmId, FutureCallback<Task> futureCallback) {
 		logger.info("Getting network details for VM {}", vmId);
+		Network network = CommandExecutor.getVmNetwork(vmId);
+
 		Task networkTask = new Task();
 		String id = UUID.randomUUID().toString();
 		networkTask.setId(id);
@@ -103,14 +104,13 @@ public class VcClient {
 		networkTask.setEntity(vmEntity);
 		VmNetworks vmNetwork = new VmNetworks();
 		Set<NetworkConnection> networkConnections = new HashSet<>();
-		NetworkConnection netConn = new NetworkConnection("00:0c:29:xx:yy:zz");
-		netConn.setIpAddress("10.10.10.10");
+		NetworkConnection netConn = new NetworkConnection(network.getMacAddress());
+		netConn.setIpAddress(network.getIpAddress());
 		networkConnections.add(netConn);
 		vmNetwork.setNetworkConnections(networkConnections);
 		networkTask.setResourceProperties(vmNetwork);
 		futureCallback.onSuccess(networkTask);
 		logger.info("Successfully got network details for VM {}", vmId);
-		// TODO Auto-generated method stub
 		
 	}
 

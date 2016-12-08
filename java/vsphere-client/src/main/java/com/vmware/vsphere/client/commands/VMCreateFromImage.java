@@ -3,6 +3,7 @@ package com.vmware.vsphere.client.commands;
 import static com.vmware.vsphere.client.config.VcClientProperties.INSTANCE;
 
 import java.rmi.RemoteException;
+import java.util.Map;
 
 import com.vmware.vim25.AlreadyExistsFaultMsg;
 import com.vmware.vim25.CustomizationFaultFaultMsg;
@@ -69,6 +70,7 @@ public class VMCreateFromImage extends BaseCommand {
 		vmLinkedClone.setCloneName(vmname);
 		vmLinkedClone.setTargetResourcePool(resPool);
 		String cloneMoRef = vmLinkedClone.createLinkedClone();
+		getNetwork(cloneMoRef);
 		return cloneMoRef;
 	}
 
@@ -105,5 +107,19 @@ public class VMCreateFromImage extends BaseCommand {
 				.getServiceContent().getPropertyCollector();
 		return vcService.getGetMOREFs()
 				.vmByVMname(KUBERNETES_IMAGE_VM, propCol);
+	}
+
+	private Map<String, Object> getNetwork(String vm) {
+		ManagedObjectReference moRef = new ManagedObjectReference();
+		moRef.setType("VirtualMachine");
+		moRef.setValue(vm);
+		Map<String, Object> result = null;
+		try {
+			result = vcService.getGetMOREFs().entityProps(moRef , new String[] {"guest"});
+		} catch (InvalidPropertyFaultMsg | RuntimeFaultFaultMsg e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return result;
 	}
 }

@@ -12,10 +12,10 @@
  */
 package com.vmware.photon.controller.clustermanager.tasks;
 
-import com.vmware.photon.controller.api.model.ResourceList;
 import com.vmware.photon.controller.api.model.Vm;
 import com.vmware.photon.controller.mockcloudstore.xenon.entity.ClusterService;
 import com.vmware.photon.controller.mockcloudstore.xenon.entity.ClusterServiceFactory;
+import com.vmware.photon.controller.xenon.client.GeneralApiClient;
 import com.vmware.photon.controller.clustermanager.rolloutplans.NodeRollout;
 import com.vmware.photon.controller.clustermanager.rolloutplans.NodeRolloutInput;
 import com.vmware.photon.controller.clustermanager.rolloutplans.NodeRolloutResult;
@@ -46,7 +46,6 @@ import com.vmware.xenon.common.ServiceErrorResponse;
 import com.vmware.xenon.common.StatefulService;
 import com.vmware.xenon.common.TaskState;
 import com.vmware.xenon.common.Utils;
-
 import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.Nullable;
@@ -141,11 +140,11 @@ public class ClusterExpandTaskService extends StatefulService {
   private void initializeExpandCluster(final State currentState,
                                        final ClusterService.State clusterDocument) throws IOException {
 
-    /*HostUtils.getApiClient(this).getClusterApi().getVmsInClusterAsync(
+	  GeneralApiClient.getVmAsync(
         currentState.clusterId,
-        new FutureCallback<ResourceList<Vm>>() {
+        new FutureCallback<List<Vm>>() {
           @Override
-          public void onSuccess(@Nullable ResourceList<Vm> result) {
+          public void onSuccess(List<Vm> result) {
             int currentSlaveCount = 0;
             String masterNodeTag;
             String slaveNodeTag;
@@ -168,7 +167,7 @@ public class ClusterExpandTaskService extends StatefulService {
             }
 
             String masterVmId = null;
-            for (Vm vm : result.getItems()) {
+            for (Vm vm : result) {
               if (vm.getTags().contains(slaveNodeTag)) {
                 ++currentSlaveCount;
               } else if (vm.getTags().contains(masterNodeTag)) {
@@ -204,7 +203,7 @@ public class ClusterExpandTaskService extends StatefulService {
             failTask(t);
           }
         }
-    );*/
+    );
   }
 
   private void getMasterIp(final State currentState,
