@@ -15,8 +15,12 @@ package com.vmware.photon.controller.mockcloudstore.xenon.entity;
 
 import com.vmware.photon.controller.api.model.ClusterState;
 import com.vmware.photon.controller.api.model.ClusterType;
+import com.vmware.photon.controller.clustermanager.VcsHelper;
+import com.vmware.photon.controller.clustermanager.tasks.VcsClusterVmsQueryTask;
+import com.vmware.photon.controller.clustermanager.tasks.VcsTenantClusterQueryTask;
 import com.vmware.photon.controller.common.xenon.InitializationUtils;
 import com.vmware.photon.controller.common.xenon.PatchUtils;
+import com.vmware.photon.controller.common.xenon.ServiceHostUtils;
 import com.vmware.photon.controller.common.xenon.ServiceUtils;
 import com.vmware.photon.controller.common.xenon.ValidationUtils;
 import com.vmware.photon.controller.common.xenon.deployment.NoMigrationDuringDeployment;
@@ -51,6 +55,11 @@ public class ClusterService extends StatefulService {
       InitializationUtils.initialize(startState);
       ValidationUtils.validateState(startState);
       startOperation.complete();
+      try {
+	    	ServiceHostUtils.startService(VcsHelper.getServiceHost(), VcsClusterVmsQueryTask.class, getSelfLink() + "/vms");
+	    } catch (Exception e) {
+	    	throw new RuntimeException(e);
+	    }
     } catch (IllegalStateException t) {
       ServiceUtils.failOperationAsBadRequest(this, startOperation, t);
     } catch (Throwable t) {
