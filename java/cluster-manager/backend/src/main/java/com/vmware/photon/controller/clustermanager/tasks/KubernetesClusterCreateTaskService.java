@@ -137,7 +137,6 @@ public class KubernetesClusterCreateTaskService extends StatefulService {
 
       case SETUP_SLAVES:
         setupInitialWorkers(currentState);
-        getClusterStatusPeriodically(currentState);
         break;
 
       default:
@@ -467,24 +466,6 @@ public class KubernetesClusterCreateTaskService extends StatefulService {
     return UriUtils.buildUri(UriUtils.HTTPS_SCHEME, ClusterManagerConstants.KUBECTL_BASE_URI, 443, path, null)
         .toString();
   }
-
-  // get the health status of the cluster periodically
-  private void getClusterStatusPeriodically(final KubernetesClusterCreateTask currentState) {
-    ClusterHealthCheckTaskService.State patchState = new ClusterHealthCheckTaskService.State();
-    
-    // Start the health check task without waiting for its completion so that the creation task
-    // can finish immediately.
-    Operation patchOperation = Operation
-        .createPatch(UriUtils.buildUri(getHost(),
-            ClusterHealthCheckTaskFactoryService.SELF_LINK + "/" + currentState.clusterId))
-        .setBody(patchState)
-        .setCompletion((Operation operation, Throwable throwable) -> {
-          // We ignore the failure here since maintenance task will kick in eventually.
-          TaskUtils.sendSelfPatch(this, buildPatch(TaskState.TaskStage.FINISHED, null));
-        });
-    sendRequest(patchOperation);
-  }
-
   
   private void startMaintenance(final KubernetesClusterCreateTask currentState) {
 	    ClusterMaintenanceTaskService.State patchState = new ClusterMaintenanceTaskService.State();
