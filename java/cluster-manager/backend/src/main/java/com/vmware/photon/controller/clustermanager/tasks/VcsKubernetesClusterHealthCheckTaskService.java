@@ -1,5 +1,7 @@
 package com.vmware.photon.controller.clustermanager.tasks;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import com.vmware.photon.controller.common.xenon.ServiceUtils;
@@ -106,8 +108,41 @@ public class VcsKubernetesClusterHealthCheckTaskService extends StatefulService 
 					patchState.clusterhealth = ClusterHealth.RED;
 				}
 				
-				if (patchState.clusterhealth != cluster.clusterhealth) {
-					ServiceUtils.logInfo(this, "Existing health state is not maching with the current state.");
+				patchState.healthTip="";
+				
+				BufferedReader stdInput = new BufferedReader(new 
+					     InputStreamReader(p.getInputStream()));
+				
+				
+				switch (p.exitValue()){
+					case 1:
+						patchState.healthTip= "Slaves not healthy :" + stdInput.readLine();
+						break;
+					case 2:
+						patchState.healthTip= "Required number of slaves not running";
+						break;
+					case 3:
+						patchState.healthTip= "ETCD not healthy :" + stdInput.readLine();
+						break;
+					case 4:
+						patchState.healthTip= "Controller manager not healthy";
+						break;
+					case 5:
+						patchState.healthTip= "Scheduler  not healthy";
+						break;
+					case 6:
+						patchState.healthTip= "Master not reachable";
+						break;
+					default:
+						break;
+				}
+					
+				
+				
+				
+				if (patchState.clusterhealth != cluster.clusterhealth ||
+						patchState.healthTip != cluster.healthTip) {
+					ServiceUtils.logInfo(this, "Existing health state is not matching with the current state.");
 					
 					sendRequest(
 			              HostUtils.getCloudStoreHelper(this)
