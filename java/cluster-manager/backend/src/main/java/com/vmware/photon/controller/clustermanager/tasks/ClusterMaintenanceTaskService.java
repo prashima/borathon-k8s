@@ -322,7 +322,8 @@ public class ClusterMaintenanceTaskService extends StatefulService {
           public void onSuccess(@Nullable GarbageInspectionTaskService.State result) {
             switch (result.taskState.stage) {
               case FINISHED:
-                performGarbageCollection(currentState, clusterId);
+                //performGarbageCollection(currentState, clusterId);
+            	  expandCluster(currentState, clusterId);
                 break;
               case CANCELLED:
                 IllegalStateException cancelled = new IllegalStateException(String.format(
@@ -338,6 +339,8 @@ public class ClusterMaintenanceTaskService extends StatefulService {
                 TaskUtils.sendSelfPatch(ClusterMaintenanceTaskService.this,
                     buildPatch(TaskState.TaskStage.FAILED, failed));
                 break;
+			default:
+				break;
             }
           }
 
@@ -380,6 +383,8 @@ public class ClusterMaintenanceTaskService extends StatefulService {
                 TaskUtils.sendSelfPatch(ClusterMaintenanceTaskService.this,
                     buildPatch(TaskState.TaskStage.FAILED, failed));
                 break;
+			default:
+				break;
             }
           }
 
