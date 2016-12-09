@@ -137,6 +137,7 @@ public class KubernetesClusterCreateTaskService extends StatefulService {
 
       case SETUP_SLAVES:
         setupInitialWorkers(currentState);
+        getClusterStatusPeriodically(currentState);
         break;
 
       default:
@@ -467,16 +468,15 @@ public class KubernetesClusterCreateTaskService extends StatefulService {
         .toString();
   }
 
-  private void startMaintenance(final KubernetesClusterCreateTask currentState) {
-    ClusterMaintenanceTaskService.State patchState = new ClusterMaintenanceTaskService.State();
-    patchState.taskState = new TaskState();
-    patchState.taskState.stage = TaskState.TaskStage.STARTED;
-
-    // Start the maintenance task async without waiting for its completion so that the creation task
+  // get the health status of the cluster periodically
+  private void getClusterStatusPeriodically(final KubernetesClusterCreateTask currentState) {
+    ClusterHealthCheckTaskService.State patchState = new ClusterHealthCheckTaskService.State();
+    
+    // Start the health check task without waiting for its completion so that the creation task
     // can finish immediately.
     Operation patchOperation = Operation
         .createPatch(UriUtils.buildUri(getHost(),
-            ClusterMaintenanceTaskFactoryService.SELF_LINK + "/" + currentState.clusterId))
+            ClusterHealthCheckTaskFactoryService.SELF_LINK + "/" + currentState.clusterId))
         .setBody(patchState)
         .setCompletion((Operation operation, Throwable throwable) -> {
           // We ignore the failure here since maintenance task will kick in eventually.
@@ -485,6 +485,25 @@ public class KubernetesClusterCreateTaskService extends StatefulService {
     sendRequest(patchOperation);
   }
 
+  
+  private void startMaintenance(final KubernetesClusterCreateTask currentState) {
+	    ClusterMaintenanceTaskService.State patchState = new ClusterMaintenanceTaskService.State();
+	    patchState.taskState = new TaskState();
+	    patchState.taskState.stage = TaskState.TaskStage.STARTED;
+
+	    // Start the maintenance task async without waiting for its completion so that the creation task
+	    // can finish immediately.
+	    Operation patchOperation = Operation
+	        .createPatch(UriUtils.buildUri(getHost(),
+	            ClusterMaintenanceTaskFactoryService.SELF_LINK + "/" + currentState.clusterId))
+	        .setBody(patchState)
+	        .setCompletion((Operation operation, Throwable throwable) -> {
+	          // We ignore the failure here since maintenance task will kick in eventually.
+	          TaskUtils.sendSelfPatch(this, buildPatch(TaskState.TaskStage.FINISHED, null));
+	        });
+	    sendRequest(patchOperation);
+	  }
+  
   private void validateStartState(KubernetesClusterCreateTask startState) {
     ValidationUtils.validateState(startState);
     ValidationUtils.validateTaskStage(startState.taskState);
