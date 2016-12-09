@@ -113,7 +113,9 @@ public class ClusterService extends StatefulService {
     
     @NotNull
     public ClusterHealth clusterhealth = ClusterHealth.GREEN;
-   
+
+    public String healthTip;
+
     /**
      * The name of the cluster.
      */
