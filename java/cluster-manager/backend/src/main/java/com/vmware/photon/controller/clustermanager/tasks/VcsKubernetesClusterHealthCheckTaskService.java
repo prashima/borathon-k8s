@@ -92,7 +92,7 @@ public class VcsKubernetesClusterHealthCheckTaskService extends StatefulService 
 				String masterIp = cluster.extendedProperties.get("master_ip");
 				ServiceUtils.logInfo(this, "%s: MasterIP = %s, numberSlaves = %d", entry.getKey(), masterIp, cluster.slaveCount);
 				
-				String cmd = "/root/checkKubeStatus " + masterIp + " " +  cluster.slaveCount;
+				String cmd = "/tmp/checkKubeStatus " + masterIp + " " +  cluster.slaveCount;
 				
 				java.lang.Runtime rt = java.lang.Runtime.getRuntime();
 				java.lang.Process p = rt.exec(cmd);
