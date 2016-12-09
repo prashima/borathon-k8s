@@ -14,6 +14,7 @@ public class VcsProperties extends Properties {
 	
 	private static String CLUSTER_MANAGER_SCRIPTS_DIR_KEY = "clusterManagerScriptsDir";
 	private static String VCS_STORAGE_PATH_KEY = "vcsStoragePath";
+	private static String CHECK_KUBE_PATH_KEY = "cubeStatusPath";
 	
 	public static synchronized void init(String file) throws Exception {
 		logger.info("Initializing VcsProperties with {}", file);
@@ -39,4 +40,10 @@ public class VcsProperties extends Properties {
 		return instance.getProperty(VCS_STORAGE_PATH_KEY);		
 	}
 
+	public static String getKubeStatusPath() {
+		if (instance == null) {
+			throw new RuntimeException("csProperties not initialized!!!");
+		}
+		return instance.getProperty(CHECK_KUBE_PATH_KEY);
+	}
 }

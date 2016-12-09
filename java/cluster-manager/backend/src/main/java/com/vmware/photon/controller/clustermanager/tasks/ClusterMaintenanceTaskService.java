@@ -69,7 +69,11 @@ public class ClusterMaintenanceTaskService extends StatefulService {
     State startState = startOperation.getBody(State.class);
 
     InitializationUtils.initialize(startState);
+    try {
     validateStartState(startState);
+    } catch (Throwable e) {
+        failTask(e);
+    }
 
     Operation start = startOperation.setBody(startState);
     start.complete();

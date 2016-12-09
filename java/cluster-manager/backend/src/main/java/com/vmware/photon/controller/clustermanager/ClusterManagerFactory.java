@@ -31,6 +31,7 @@ import com.vmware.photon.controller.clustermanager.tasks.KubernetesClusterCreate
 import com.vmware.photon.controller.clustermanager.tasks.MesosClusterCreateTaskFactoryService;
 import com.vmware.photon.controller.clustermanager.tasks.SwarmClusterCreateTaskFactoryService;
 import com.vmware.photon.controller.clustermanager.tasks.VcsClusterFactoryService;
+import com.vmware.photon.controller.clustermanager.tasks.VcsKubernetesClusterHealthCheckFactoryService;
 import com.vmware.photon.controller.clustermanager.tasks.VcsTenantFactoryService;
 import com.vmware.photon.controller.clustermanager.tasks.VmDeprovisionTaskFactoryService;
 import com.vmware.photon.controller.clustermanager.tasks.VmProvisionTaskFactoryService;
@@ -78,6 +79,7 @@ public class ClusterManagerFactory {
       TombstoneServiceFactory.class,
       VcsClusterFactoryService.class,
       VcsTenantFactoryService.class,
+      VcsKubernetesClusterHealthCheckFactoryService.class
   };
 
   /**

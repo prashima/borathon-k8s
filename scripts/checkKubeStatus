@@ -1,0 +1,125 @@
+#!/bin/perl
+
+use strict;
+use warnings;
+
+my %ret = ();
+$ret { SUCCESS } = 0;
+$ret { SLAVE_NOT_HEALTY } = 1;
+$ret { REQ_SLAVES_NOT_RUNNING } = 2;
+$ret { ETCD_NOT_HEALTY } = 3;
+$ret { CONTROLLER_MANAGER_NOT_HEALTHY } = 4;
+$ret { SCHEDULER_NOT_HEALTHY } = 5;
+$ret { MASTER_NOT_REACHABLE } = 6;
+
+my ($master_ip, $numSlaves) = @ARGV;
+
+my $user = "root";
+my $pass = "changeme";
+
+my $kubectl = "/root/kubectl";
+my $exp = "/tmp/exp.vcs";
+
+# ====================================
+# Step 0: Check if master is reachable
+# ====================================
+
+my $cmd = "ping -c 5 $master_ip";
+`$cmd`;
+if ($? != 0) {
+	exit $ret { MASTER_NOT_REACHABLE };
+}
+
+
+# ===================================
+# Step 1: Check status of the slaves 
+# ===================================
+
+$cmd = "$exp $pass ssh -o StrictHostKeyChecking=no $user\@$master_ip $kubectl get nodes";
+my @lines = `$cmd`;
+
+# Need to remove first 3 lines from the o/p
+# Sample o/p:
+#
+# spawn ssh -o StrictHostKeyChecking=no kube@10.20.104.146 kubectl get nodes   <<
+# kube@10.20.104.146's password:                                               <<
+# NAME                  STATUS    AGE                                          <<
+# kubernetes-minion-1   Ready     45m
+# kubernetes-minion-2   Ready     45m
+# kubernetes-minion-3   Ready     45m
+# kubernetes-minion-4   Ready     45m
+#
+# Note: kubectl get nodes returns all nodes master + slaves.
+#
+shift @lines;
+shift @lines;
+shift @lines;
+
+if ($#lines != $numSlaves) {
+	exit $ret { REQ_SLAVES_NOT_RUNNING };
+}
+
+my $badSlaves = "False";
+for (my $i = 0; $i <= $#lines; ++$i) {
+	#print $lines[$i];
+	my @fields = split(/\s+/, $lines[$i]);
+	if ($fields[1] !~ /ready/i) {
+		print " ". $fields[0];
+		$badSlaves = "True";
+	}
+}
+
+if ($badSlaves eq "True") {
+	print "\n";
+	exit $ret { SLAVE_NOT_HEALTY };
+}
+
+
+# ============================================
+# Step 2: Check status of the other components
+# ============================================
+
+$cmd = "$exp $pass ssh -o StrictHostKeyChecking=no $user\@$master_ip $kubectl get cs";
+@lines = `$cmd`;
+
+# Remove first 3 lines.
+# Sample o/p:
+#
+# spawn ssh -o StrictHostKeyChecking=no kube@10.20.104.146 kubectl get cs
+# kube@10.20.104.146's password: 
+# NAME                 STATUS    MESSAGE              ERROR
+# controller-manager   Healthy   ok                   
+# scheduler            Healthy   ok                   
+# etcd-0               Healthy   {"health": "true"}   
+# etcd-1               Healthy   {"health": "true"}   
+#
+shift @lines;
+shift @lines;
+shift @lines;
+
+my $badEtcd = "False";
+for (my $i = 0; $i <= $#lines; ++$i) {
+	#print $lines[$i];
+	my @fields = split(/\s+/, $lines[$i]);
+	if ($fields[0] =~ /^controller-manager/i and $fields[1] !~ /healthy/i ) {
+		exit $ret { CONTROLLER_MANAGER_NOT_HEALTHY };
+	}
+
+	if ($fields[0] =~ /^scheduler/i and $fields[1] !~ /healthy/i ) {
+		exit $ret { SCHEDULER_NOT_HEALTHY };
+	}
+
+	# now remaining are etcd.
+	if ($fields[0] =~ /^etcd/i and $fields[1] !~ /healthy/i ) {
+		print " " . $fields[0];
+		$badEtcd = "True";
+	}
+}
+
+if ($badEtcd eq "True") {
+	print "\n";
+	exit $ret { ETCD_NOT_HEALTY };
+}
+
+exit $ret { SUCCESS };
+

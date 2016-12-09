@@ -13,6 +13,8 @@
 
 package com.vmware.photon.controller.mockcloudstore.xenon.entity;
 
+import com.esotericsoftware.kryo.serializers.FieldSerializer.Optional;
+import com.vmware.photon.controller.api.model.ClusterHealth;
 import com.vmware.photon.controller.api.model.ClusterState;
 import com.vmware.photon.controller.api.model.ClusterType;
 import com.vmware.photon.controller.clustermanager.VcsHelper;
@@ -25,6 +27,8 @@ import com.vmware.photon.controller.common.xenon.ServiceUtils;
 import com.vmware.photon.controller.common.xenon.ValidationUtils;
 import com.vmware.photon.controller.common.xenon.deployment.NoMigrationDuringDeployment;
 import com.vmware.photon.controller.common.xenon.migration.NoMigrationDuringUpgrade;
+import com.vmware.photon.controller.common.xenon.validation.DefaultInteger;
+import com.vmware.photon.controller.common.xenon.validation.DefaultString;
 import com.vmware.photon.controller.common.xenon.validation.Immutable;
 import com.vmware.photon.controller.common.xenon.validation.NotBlank;
 import com.vmware.photon.controller.common.xenon.validation.NotNull;
@@ -33,6 +37,8 @@ import com.vmware.xenon.common.ServiceDocument;
 import com.vmware.xenon.common.StatefulService;
 
 import java.util.Map;
+
+import javax.validation.constraints.Null;
 
 /**
  * This class implements a Xenon micro-service which provides a plain data object
@@ -104,6 +110,10 @@ public class ClusterService extends StatefulService {
     @NotNull
     public ClusterState clusterState;
 
+    
+    @NotNull
+    public ClusterHealth clusterhealth = ClusterHealth.GREEN;
+   
     /**
      * The name of the cluster.
      */
