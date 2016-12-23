@@ -16,7 +16,9 @@ public class VcsProperties extends Properties {
 	private static String VCS_STORAGE_PATH_KEY = "vcsStoragePath";
 	private static String CHECK_KUBE_PATH_KEY = "cubeStatusPath";
 	private static String TENANT_SUPPORT_ENABLED = "tenantSupportEnabled";
-	
+	private static String DOCKER_ENGINE_IP = "dockerEngineIp";
+	private static String DOCKER_ENGINE_PORT = "dockerEnginePort";
+
 	public static synchronized void init(String file) throws Exception {
 		logger.info("Initializing VcsProperties with {}", file);
 		if (instance == null) {
@@ -53,5 +55,23 @@ public class VcsProperties extends Properties {
 			throw new RuntimeException("tenantSupportEnabled not initialized!!");
 		}
 		return Boolean.getBoolean(instance.getProperty(TENANT_SUPPORT_ENABLED));
+	}
+
+	public static String getDockerEngineIp() {
+		if (instance == null) {
+			throw new RuntimeException("dockerEngineIp not initialized!!");
+		}
+		return instance.getProperty(DOCKER_ENGINE_IP);
+	}
+
+	public static String getDockerEnginePort() {
+		if (instance == null) {
+			throw new RuntimeException("dockerEnginePort not initialized!!");
+		}
+		String port = instance.getProperty(DOCKER_ENGINE_PORT);
+		if (getDockerEngineIp() != null && (port == null || port.isEmpty())) {
+			port = "2376";
+		}
+		return port;
 	}
 }
