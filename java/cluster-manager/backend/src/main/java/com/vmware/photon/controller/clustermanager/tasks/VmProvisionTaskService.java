@@ -24,6 +24,7 @@ import com.vmware.photon.controller.clustermanager.servicedocuments.TenantSpec;
 import com.vmware.photon.controller.clustermanager.utils.ApiUtils;
 import com.vmware.photon.controller.clustermanager.utils.HostUtils;
 import com.vmware.photon.controller.clustermanager.utils.ScriptRunner;
+import com.vmware.photon.controller.common.utils.VcsProperties;
 import com.vmware.photon.controller.common.xenon.ControlFlags;
 import com.vmware.photon.controller.common.xenon.InitializationUtils;
 import com.vmware.photon.controller.common.xenon.PatchUtils;
@@ -48,11 +49,11 @@ import com.vmware.xenon.common.ServiceErrorResponse;
 import com.vmware.xenon.common.StatefulService;
 import com.vmware.xenon.common.TaskState;
 import com.vmware.xenon.common.Utils;
-
 import com.google.common.base.Predicate;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFutureTask;
+
 import static com.google.common.base.Preconditions.checkState;
 
 import javax.annotation.Nullable;
@@ -190,9 +191,13 @@ public class VmProvisionTaskService extends StatefulService {
     };
 
     try {
+      String tenantId = null;
+      if (VcsProperties.isTenantSupportEnabled()) {
+    	  tenantId = currentState.projectId;
+      }
       HostUtils.getVcClient().createVmAsync(
-          currentState.projectId,
-          composeVmCreateSpec(currentState.projectId, currentState),
+          tenantId,
+          composeVmCreateSpec(tenantId, currentState),
           callback);
     } catch (Throwable ex) {
       failTask(ex);
@@ -200,24 +205,26 @@ public class VmProvisionTaskService extends StatefulService {
   }
 
   private VmCreateSpec composeVmCreateSpec(final String tenantId, final State currentState) {
-	  
+  
 	TenantSpec tenantSpec = null;
-	try {
-		Operation op = VcsXenonRestClient.getVcsRestClient().get(
-		            VcsTenantFactoryService.SELF_LINK + "/" + tenantId);
-		tenantSpec = op.getBody(TenantSpec.class);
-	} catch (Throwable t) {
-		t.printStackTrace();
-		failTask(t);
+	if (tenantId != null) {
+		try {
+			Operation op = VcsXenonRestClient.getVcsRestClient().get(
+			            VcsTenantFactoryService.SELF_LINK + "/" + tenantId);
+			tenantSpec = op.getBody(TenantSpec.class);
+		} catch (Throwable t) {
+			t.printStackTrace();
+			failTask(t);
+		}
 	}
-
     VmCreateSpec spec = new VmCreateSpec();
     spec.setName(currentState.vmName);
     spec.setFlavor(currentState.vmFlavorName);
     spec.setTags(currentState.vmTags);
     spec.setSourceImageId(currentState.imageId);
-    spec.setTenantResourcePool(tenantSpec.getRes()[0].getTenantResourcePoolMoId());
-
+    if (tenantSpec != null) {
+    	spec.setTenantResourcePool(tenantSpec.getRes()[0].getTenantResourcePoolMoId());
+    }
     if (currentState.vmNetworkId != null) {
       List<String> networks = new ArrayList<>();
       networks.add(currentState.vmNetworkId);
