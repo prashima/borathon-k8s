@@ -15,6 +15,7 @@ package com.vmware.photon.controller.api.model;
 
 import com.vmware.photon.controller.api.model.base.Flavorful;
 import com.vmware.photon.controller.api.model.base.Named;
+import com.vmware.vim25.NotSupportedDeviceForFTDeviceType;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -40,6 +41,7 @@ public class VmCreateSpec implements Flavorful, Named {
   //private List<LocalitySpec> affinities = new ArrayList<>();
   private List<String> subnets;
   private String tenantResourcePool;
+  private String nodeType;
 
   public String getKind() {
     return KIND;
@@ -148,6 +150,14 @@ public String getTenantResourcePool() {
 
 public void setTenantResourcePool(String tenantResourcePool) {
 	this.tenantResourcePool = tenantResourcePool;
+}
+
+public String getNodeType() {
+	return nodeType;
+}
+
+public void setNodeType(String nodeType) {
+	this.nodeType = nodeType;
 }
 
 }

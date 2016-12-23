@@ -9,6 +9,16 @@
 
 // Apply the java plugin to add support for Java
 apply plugin: 'java'
+apply plugin: 'application'
+apply plugin: 'distribution'
+
+distributions {
+    main {
+        contents {
+            from { '../common/src/main/resources' }
+        }
+    }
+}
 
 // In this section you declare where to find the dependencies of your project
 repositories {
@@ -38,3 +48,5 @@ dependencies {
     // 'test.useTestNG()' to your build script.
     testCompile 'junit:junit:4.12'
 }
+mainClassName = "com.vmware.vcs.core.Main"
+applicationDefaultJvmArgs = ["-Dvsphere-client-properties=vsphere-client.properties –Dssl.trustAll.enabled=true"]

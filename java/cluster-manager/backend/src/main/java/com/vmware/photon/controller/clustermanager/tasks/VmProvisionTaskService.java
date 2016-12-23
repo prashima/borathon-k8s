@@ -20,6 +20,7 @@ import com.vmware.photon.controller.api.model.Task;
 import com.vmware.photon.controller.api.model.VmCreateSpec;
 import com.vmware.photon.controller.clustermanager.servicedocuments.ClusterManagerConstants;
 import com.vmware.photon.controller.clustermanager.servicedocuments.FileTemplate;
+import com.vmware.photon.controller.clustermanager.servicedocuments.NodeType;
 import com.vmware.photon.controller.clustermanager.servicedocuments.TenantSpec;
 import com.vmware.photon.controller.clustermanager.utils.ApiUtils;
 import com.vmware.photon.controller.clustermanager.utils.HostUtils;
@@ -222,6 +223,7 @@ public class VmProvisionTaskService extends StatefulService {
     spec.setFlavor(currentState.vmFlavorName);
     spec.setTags(currentState.vmTags);
     spec.setSourceImageId(currentState.imageId);
+    spec.setNodeType(currentState.nodeType.name());
     if (tenantSpec != null) {
     	spec.setTenantResourcePool(tenantSpec.getRes()[0].getTenantResourcePoolMoId());
     }
@@ -243,7 +245,7 @@ public class VmProvisionTaskService extends StatefulService {
 
     spec.setAttachedDisks(attachedDisks);
 
-    Map<String, String> environment = new HashMap<>();
+    Map<String, String> environment = new HashMap<>(currentState.nodeProperties);
     spec.setEnvironment(environment);
 
     return spec;
@@ -634,7 +636,7 @@ public class VmProvisionTaskService extends StatefulService {
     public String vmIpAddress;
     
     @Immutable
-    public String nodeType;
+    public NodeType nodeType;
     
     @Immutable
     public Map<String, String> nodeProperties;
