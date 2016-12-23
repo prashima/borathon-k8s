@@ -77,9 +77,9 @@ public class ClusterManagerFactory {
       WaitForNetworkTaskFactoryService.class,
       ClusterServiceFactory.class,
       TombstoneServiceFactory.class,
-      VcsClusterFactoryService.class,
-      VcsTenantFactoryService.class,
-      VcsKubernetesClusterHealthCheckFactoryService.class
+      VcsClusterFactoryService.class//,
+      //VcsTenantFactoryService.class,
+      //VcsKubernetesClusterHealthCheckFactoryService.class
   };
 
   /**

@@ -68,7 +68,9 @@ public class VMCreateFromImage extends BaseCommand {
 		vmLinkedClone.setVirtualMachineName(KUBERNETES_IMAGE_VM);
 		vmLinkedClone.setSnapshotName(KUBERNETES_IMAGE_SNAPSHOT);
 		vmLinkedClone.setCloneName(vmname);
-		vmLinkedClone.setTargetResourcePool(resPool);
+		if (resPool != null && !resPool.isEmpty()) {
+			vmLinkedClone.setTargetResourcePool(resPool);
+		}
 		String cloneMoRef = vmLinkedClone.createLinkedClone();
 		getNetwork(cloneMoRef);
 		return cloneMoRef;

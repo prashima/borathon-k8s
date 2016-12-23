@@ -114,10 +114,12 @@ public class VMLinkedClone extends BaseCommand {
                         getIndependenetVirtualDiskKeys(vmMOR);
 
                 VirtualMachineRelocateSpec rSpec = new VirtualMachineRelocateSpec();
-                ManagedObjectReference targetResourcePoolMoRef = new ManagedObjectReference();
-                targetResourcePoolMoRef.setType("ResourcePool");
-                targetResourcePoolMoRef.setValue(targetResourcePool);
-                rSpec.setPool(targetResourcePoolMoRef);
+                if (targetResourcePool != null) {
+	                ManagedObjectReference targetResourcePoolMoRef = new ManagedObjectReference();
+	                targetResourcePoolMoRef.setType("ResourcePool");
+	                targetResourcePoolMoRef.setValue(targetResourcePool);
+	                rSpec.setPool(targetResourcePoolMoRef);
+                }
                 if (independentVirtualDiskKeys.size() > 0) {
                     List<ManagedObjectReference> ds =
                             ((ArrayOfManagedObjectReference) vcService.getGetMOREFs().entityProps(vmMOR,
