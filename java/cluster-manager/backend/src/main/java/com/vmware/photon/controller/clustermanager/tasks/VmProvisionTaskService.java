@@ -625,6 +625,12 @@ public class VmProvisionTaskService extends StatefulService {
      */
     @WriteOnce
     public String vmIpAddress;
+    
+    @Immutable
+    public String nodeType;
+    
+    @Immutable
+    public Map<String, String> nodeProperties;
 
     /**
      * This class represents the state of the VmProvisioningTask.
