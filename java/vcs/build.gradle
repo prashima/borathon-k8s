@@ -15,7 +15,16 @@ apply plugin: 'distribution'
 distributions {
     main {
         contents {
-            from { '../common/src/main/resources' }
+            from jar.outputs.files
+            from ('../common/src/main/resources/vcs.properties') {
+                into 'config'
+            }
+            from ('../vsphere-client/src/main/resources/vsphere-client.properties') {
+                into 'config'
+            }
+            from ('../cluster-manager/backend/src/main/resources/scripts') {
+                into 'scripts'
+            }
         }
     }
 }
