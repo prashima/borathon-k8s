@@ -15,6 +15,7 @@ package com.vmware.photon.controller.clustermanager.utils;
 
 import com.vmware.photon.controller.api.client.ApiClient;
 import com.vmware.photon.controller.api.client.VcClient;
+import com.vmware.photon.controller.api.client.VchClient;
 import com.vmware.photon.controller.clustermanager.ClusterManagerFactory;
 import com.vmware.photon.controller.clustermanager.ClusterManagerFactoryProvider;
 import com.vmware.photon.controller.clustermanager.clients.EtcdClient;
@@ -107,6 +108,10 @@ public class HostUtils {
   public static VcClient getVcClient() {
 	  return VcClient.getVcClient();
 	  
+  }
+
+  public static VchClient getVchClient() {
+	  return VchClient.getVchClient();  
   }
 
   /**
