@@ -25,6 +25,9 @@ distributions {
             from ('../cluster-manager/backend/src/main/resources/scripts') {
                 into 'scripts'
             }
+            from ('src/main/resources/scripts') {
+                into 'scripts'
+            }
         }
     }
 }
