@@ -1,36 +1,31 @@
-This is a prototype of kubernetes deployment on vCenter.
+This is a prototype of kubernetes deployment on vCenter using vSphere Integrated Containers.
 
-# Setup
-## For VM deployment
-* 1 vCenter.
-* 1 ESX.
-* 1 datastore with at least 40GB of space.
+# Installations
+* Deploy VCH to a Basic vCenter Server Cluster - https://vmware.github.io/vic-product/assets/files/html/0.8/vic_installation/deploy_vch_vcenter.html
+Here's a sample command to create vSphere Container Host(VCH) -
+vic-machine-windows.exe create --name san-7  --target 10.20.104.101/DC --compute-resource DRS1 --user "Administrator@vsphere.local" --bridge-network vic-bridge --image-store nfsDatastore/san-7 --no-tlsverify --force --timeout 15m0s
 
-## For running this kubernetes deployment service
-Currently the prototype has been tested by running the service in eclipse only.
+* Enable ssh on VCH VM as we need to copy vSphere Container Service (VCS) binary and start it on VCH VM. Sample command -
+vic-machine-windows.exe debug --target 10.20.104.101 --compute-resource DRS1 --user "Administrator@vsphere.local" --name san-7 --rootpw "ca$hc0w" -thumbprint "BE:A7:D1:F0:9A:D3:D8:BB:D5:1F:D7:C4:73:7C:9B:4A:70:3B:BE:12"
 
-### Installations
-* Install ISO generation utility genisoimage or mkisofs.
-* Download and install JDK 8 (latest patch).
-* Download and install latest version of gradle from https://gradle.org/gradle-download/.
-* Install latest version of Eclipse IDE.
-* Install gradle eclipse plugin (buildship) in eclipse.
+* In VCS project, build VCS distribution (tar and zip)
+cd borathon-k8s/java
+gradle build -x test
 
-### Building and importing project in eclipse
-* Clone this repo and go to java directory> cd [project-dir]/vcs-proto1/java
-* Build the project by executing command> gradle build
-* Once the project has built successfully import [project-dir]/vcs-proto1/java as gradle project in eclipse. The parent gradle project (build.gradle file) is in vcs-proto1/java directory.
+* Copy VCS zip file to VCH VM
+cd vcs/build/distributions
+scp vcs-vcs0.1-13e58dc.zip root@10.20.104.161:~/
 
-### Property files
-* Edit java/common/src/main/resources/vcs.properties file as per your dev environment setup.
-* Edit java/vsphere-client/src/main/resources/vsphere-client.properties to point to your vCenter setup.
-  * One of the working kubernetes image is available here http://pa-dbc1131.eng.vmware.com/prashimas/misc/images/kubernetes/, currently accessible from within VMware network (will fix this soon!).
+* In VCH VM, install unzip utility
+rpm --rebuilddb
+tdnf install -y unzip
 
-### Running the service
-* The main class for this service is com.vmware.vcs.core.Main. Run this as Java application with the following program and VM arguments.
-  * Under program arguments specify “java/common/src/main/resources/vcs.properties” file as an argument.
-  * Under VM arguments specify “-Dvsphere-client-properties=vsphere-client.properties –Dssl.trustAll.enabled=true”
+* Unzip VCS
+unzip vcs-vcs0.1-13e58dc.zip
 
+* Run VCS after editing config/vcs.properties and config/vsphere-client.properties with correct properties
+cd vcs-vcs0.1-13e58dc/scripts/
+nohup ./start_vcs.sh 2>&1 > ~/vcs.log &
 
 # Using this service
 Users will need REST API client to interacte with this service.
@@ -71,6 +66,18 @@ Users will need REST API client to interacte with this service.
 ```
   * Modify clusterName, etcd_ips, dns, gateway, netmask, master_ip to appropriate values as per your setup.
 
-# Note
-* There will be a parent image VM and snapshot created in vCenter. Do not delete the VM and snapshot.
-* First cluster creation might take some time due to image upload.
+# Building and importing project in eclipse
+* Clone this repo and go to java directory> cd [project-dir]/vcs-proto1/java
+* Build the project by executing command> gradle build
+* Once the project has built successfully import [project-dir]/vcs-proto1/java as gradle project in eclipse. The parent gradle project (build.gradle file) is in vcs-proto1/java directory.
+
+## Property files
+* Edit java/common/src/main/resources/vcs.properties file as per your dev environment setup.
+* Edit java/vsphere-client/src/main/resources/vsphere-client.properties to point to your vCenter setup.
+  * One of the working kubernetes image is available here http://pa-dbc1131.eng.vmware.com/prashimas/misc/images/kubernetes/, currently accessible from within VMware network (will fix this soon!).
+
+## Running the service
+* The main class for this service is com.vmware.vcs.core.Main. Run this as Java application with the following program and VM arguments.
+  * Under program arguments specify “java/common/src/main/resources/vcs.properties” file as an argument.
+  * Under VM arguments specify “-Dvsphere-client-properties=vsphere-client.properties –Dssl.trustAll.enabled=true”
+
