@@ -13,16 +13,19 @@ vic-machine-windows.exe debug --target 10.20.104.101 --compute-resource DRS1 --u
 * In VCS project, build VCS distribution (tar and zip)
 
 cd borathon-k8s/java
+
 gradle build -x test
 
 * Copy VCS zip file to VCH VM
 
 cd vcs/build/distributions
+
 scp vcs-vcs0.1-13e58dc.zip root@10.20.104.161:~/
 
 * In VCH VM, install unzip utility
 
 rpm --rebuilddb
+
 tdnf install -y unzip
 
 * Unzip VCS
@@ -32,6 +35,7 @@ unzip vcs-vcs0.1-13e58dc.zip
 * Run VCS after editing config/vcs.properties and config/vsphere-client.properties with correct properties
 
 cd vcs-vcs0.1-13e58dc/scripts/
+
 nohup ./start_vcs.sh 2>&1 > ~/vcs.log &
 
 # Using this service
