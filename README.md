@@ -1,29 +1,36 @@
 This is a prototype of kubernetes deployment on vCenter using vSphere Integrated Containers.
 
-# Installations
+# Installation and running vSphere Container Service (VCS) in vSphere Container Host(VCH) VM
 * Deploy VCH to a Basic vCenter Server Cluster - https://vmware.github.io/vic-product/assets/files/html/0.8/vic_installation/deploy_vch_vcenter.html
-Here's a sample command to create vSphere Container Host(VCH) -
+Here's a sample command to create VCH -
+
 vic-machine-windows.exe create --name san-7  --target 10.20.104.101/DC --compute-resource DRS1 --user "Administrator@vsphere.local" --bridge-network vic-bridge --image-store nfsDatastore/san-7 --no-tlsverify --force --timeout 15m0s
 
-* Enable ssh on VCH VM as we need to copy vSphere Container Service (VCS) binary and start it on VCH VM. Sample command -
+* Enable ssh on VCH VM as we need to copy VCS binary and start it on VCH VM. Sample command -
+
 vic-machine-windows.exe debug --target 10.20.104.101 --compute-resource DRS1 --user "Administrator@vsphere.local" --name san-7 --rootpw "ca$hc0w" -thumbprint "BE:A7:D1:F0:9A:D3:D8:BB:D5:1F:D7:C4:73:7C:9B:4A:70:3B:BE:12"
 
 * In VCS project, build VCS distribution (tar and zip)
+
 cd borathon-k8s/java
 gradle build -x test
 
 * Copy VCS zip file to VCH VM
+
 cd vcs/build/distributions
 scp vcs-vcs0.1-13e58dc.zip root@10.20.104.161:~/
 
 * In VCH VM, install unzip utility
+
 rpm --rebuilddb
 tdnf install -y unzip
 
 * Unzip VCS
+
 unzip vcs-vcs0.1-13e58dc.zip
 
 * Run VCS after editing config/vcs.properties and config/vsphere-client.properties with correct properties
+
 cd vcs-vcs0.1-13e58dc/scripts/
 nohup ./start_vcs.sh 2>&1 > ~/vcs.log &
 
