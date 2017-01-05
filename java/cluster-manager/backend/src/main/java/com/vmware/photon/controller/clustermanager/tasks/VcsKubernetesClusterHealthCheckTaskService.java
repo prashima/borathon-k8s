@@ -38,29 +38,6 @@ public class VcsKubernetesClusterHealthCheckTaskService extends StatefulService 
 	@Override
 	public void handleStart(Operation start) {
 		ServiceUtils.logInfo(this, "Starting service %s", getSelfLink());
-			
-		try {
-			// Copy kubeCheckStatus scripts to tmp dir.
-			String cmd = "cp -f " + 
-					VcsProperties.getKubeStatusPath() + "/checkKubeStatus " +
-					VcsProperties.getKubeStatusPath() + "/exp.vcs " +
-					"/tmp";
-
-			
-			java.lang.Runtime rt = java.lang.Runtime.getRuntime();
-			java.lang.Process p = rt.exec(cmd);
-			p.waitFor();
-			ServiceUtils.logInfo(this, "cmd = %s, exitStatus = %d", cmd, p.exitValue());
-			
-			// Give exe permissions if missing.
-			cmd = "chmod +x /tmp/checkKubeStatus /tmp/exp.vcs";
-			p = rt.exec(cmd);
-			p.waitFor();
-			ServiceUtils.logInfo(this, "cmd = %s, exitStatus = %d", cmd, p.exitValue());
-		} catch (Throwable e) {
-			ServiceUtils.logSevere(this, e);
-		}
-		
 		start.complete();		
 	}
 	
@@ -87,14 +64,19 @@ public class VcsKubernetesClusterHealthCheckTaskService extends StatefulService 
 				return;
 			}
 			
-			Map<String, Operation> opMap = VcsXenonRestClient.getVcsRestClient().get(result.documentLinks, 8);
-			for (Map.Entry<String, Operation> entry : opMap.entrySet()) {
-				op = entry.getValue();
+			for (String clusterDocLink : result.documentLinks) {
+				try {
+					op = VcsXenonRestClient.getVcsRestClient().get(clusterDocLink);
+				} catch (Throwable e) {
+					ServiceUtils.logWarning(this, "Exception %s occurred while getting doc %s. Continuing...", e,
+							clusterDocLink);
+					continue;
+				}
 				ClusterService.State cluster = op.getBody(ClusterService.State.class);
 				String masterIp = cluster.extendedProperties.get("master_ip");
-				ServiceUtils.logInfo(this, "%s: MasterIP = %s, numberSlaves = %d", entry.getKey(), masterIp, cluster.slaveCount);
+				ServiceUtils.logInfo(this, "%s: MasterIP = %s, numberSlaves = %d", clusterDocLink, masterIp, cluster.slaveCount);
 				
-				String cmd = "/tmp/checkKubeStatus " + masterIp + " " +  cluster.slaveCount;
+				String cmd = "/root/vcs/scripts/checkKubeStatus " + masterIp + " " +  cluster.slaveCount;
 				
 				java.lang.Runtime rt = java.lang.Runtime.getRuntime();
 				java.lang.Process p = rt.exec(cmd);
@@ -146,7 +128,7 @@ public class VcsKubernetesClusterHealthCheckTaskService extends StatefulService 
 					
 					sendRequest(
 			              HostUtils.getCloudStoreHelper(this)
-			                  .createPatch(entry.getKey())
+			                  .createPatch(clusterDocLink)
 			                  .setBody(patchState)
 			                  .setCompletion(
 			                      (Operation operation, Throwable throwable) -> {

@@ -14,11 +14,7 @@ $ret { MASTER_NOT_REACHABLE } = 6;
 
 my ($master_ip, $numSlaves) = @ARGV;
 
-my $user = "root";
-my $pass = "changeme";
-
-my $kubectl = "/root/kubectl";
-my $exp = "/tmp/exp.vcs";
+my $kubectl = "/root/vcs/scripts/kubectl";
 
 # ====================================
 # Step 0: Check if master is reachable
@@ -35,14 +31,12 @@ if ($? != 0) {
 # Step 1: Check status of the slaves 
 # ===================================
 
-$cmd = "$exp $pass ssh -o StrictHostKeyChecking=no $user\@$master_ip $kubectl get nodes";
+$cmd = "$kubectl -s $master_ip:8080 get nodes";
 my @lines = `$cmd`;
 
-# Need to remove first 3 lines from the o/p
+# Need to remove first 1 lines from the o/p
 # Sample o/p:
 #
-# spawn ssh -o StrictHostKeyChecking=no kube@10.20.104.146 kubectl get nodes   <<
-# kube@10.20.104.146's password:                                               <<
 # NAME                  STATUS    AGE                                          <<
 # kubernetes-minion-1   Ready     45m
 # kubernetes-minion-2   Ready     45m
@@ -51,8 +45,6 @@ my @lines = `$cmd`;
 #
 # Note: kubectl get nodes returns all nodes master + slaves.
 #
-shift @lines;
-shift @lines;
 shift @lines;
 
 if ($#lines != $numSlaves) {
@@ -63,7 +55,7 @@ my $badSlaves = "False";
 for (my $i = 0; $i <= $#lines; ++$i) {
 	#print $lines[$i];
 	my @fields = split(/\s+/, $lines[$i]);
-	if ($fields[1] !~ /ready/i) {
+	if ($fields[1] ne 'Ready') {
 		print " ". $fields[0];
 		$badSlaves = "True";
 	}
@@ -79,22 +71,18 @@ if ($badSlaves eq "True") {
 # Step 2: Check status of the other components
 # ============================================
 
-$cmd = "$exp $pass ssh -o StrictHostKeyChecking=no $user\@$master_ip $kubectl get cs";
+$cmd = "$kubectl -s $master_ip:8080 get cs";
 @lines = `$cmd`;
 
-# Remove first 3 lines.
+# Remove first 1 lines.
 # Sample o/p:
 #
-# spawn ssh -o StrictHostKeyChecking=no kube@10.20.104.146 kubectl get cs
-# kube@10.20.104.146's password: 
 # NAME                 STATUS    MESSAGE              ERROR
 # controller-manager   Healthy   ok                   
 # scheduler            Healthy   ok                   
 # etcd-0               Healthy   {"health": "true"}   
 # etcd-1               Healthy   {"health": "true"}   
 #
-shift @lines;
-shift @lines;
 shift @lines;
 
 my $badEtcd = "False";
@@ -122,4 +110,3 @@ if ($badEtcd eq "True") {
 }
 
 exit $ret { SUCCESS };
-
