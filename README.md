@@ -32,9 +32,13 @@ tdnf install -y unzip
 
 unzip vcs-vcs0.1-13e58dc.zip
 
-* Run VCS after editing config/vcs.properties and config/vsphere-client.properties with correct properties
+* Rename vcs-vcs0.1* folder to vcs
 
-cd vcs-vcs0.1-13e58dc/scripts/
+mv vcs-vcs0.1-13e58dc vcs
+
+* Run VCS after editing config/vcs.properties with correct properties (give proper value for dockerEngineIp property)
+
+cd vcs/scripts/
 
 nohup ./start_vcs.sh 2>&1 > ~/vcs.log &
 
