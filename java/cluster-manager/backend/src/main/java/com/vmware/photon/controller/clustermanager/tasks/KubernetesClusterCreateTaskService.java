@@ -30,6 +30,7 @@ import com.vmware.photon.controller.clustermanager.templates.KubernetesMasterNod
 import com.vmware.photon.controller.clustermanager.templates.KubernetesWorkerNodeTemplate;
 import com.vmware.photon.controller.clustermanager.templates.NodeTemplateUtils;
 import com.vmware.photon.controller.clustermanager.utils.HostUtils;
+import com.vmware.photon.controller.common.utils.VcsProperties;
 import com.vmware.photon.controller.common.xenon.ControlFlags;
 import com.vmware.photon.controller.common.xenon.InitializationUtils;
 import com.vmware.photon.controller.common.xenon.PatchUtils;
@@ -41,8 +42,8 @@ import com.vmware.xenon.common.ServiceErrorResponse;
 import com.vmware.xenon.common.StatefulService;
 import com.vmware.xenon.common.UriUtils;
 import com.vmware.xenon.common.Utils;
-
 import com.google.common.util.concurrent.FutureCallback;
+
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
@@ -50,6 +51,7 @@ import javax.annotation.Nullable;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -173,12 +175,15 @@ public class KubernetesClusterCreateTaskService extends StatefulService {
           rolloutInput.nodeCount = NodeTemplateUtils.deserializeAddressList(
               cluster.extendedProperties.get(ClusterManagerConstants.EXTENDED_PROPERTY_ETCD_IPS)).size();
           rolloutInput.nodeType = NodeType.KubernetesEtcd;
+          List<String> ips = NodeTemplateUtils.deserializeAddressList(
+                  cluster.extendedProperties.get(ClusterManagerConstants.EXTENDED_PROPERTY_ETCD_IPS));
+          rolloutInput.ipEtcd = ips.get(0);
+          rolloutInput.ipMaster = cluster.extendedProperties.get(ClusterManagerConstants.EXTENDED_PROPERTY_MASTER_IP);
           rolloutInput.nodeProperties = KubernetesEtcdNodeTemplate.createProperties(
               cluster.extendedProperties.get(ClusterManagerConstants.EXTENDED_PROPERTY_DNS),
               cluster.extendedProperties.get(ClusterManagerConstants.EXTENDED_PROPERTY_GATEWAY),
               cluster.extendedProperties.get(ClusterManagerConstants.EXTENDED_PROPERTY_NETMASK),
-              NodeTemplateUtils.deserializeAddressList(
-                  cluster.extendedProperties.get(ClusterManagerConstants.EXTENDED_PROPERTY_ETCD_IPS)),
+              ips,
               cluster.extendedProperties.get(ClusterManagerConstants.EXTENDED_PROPERTY_SSH_KEY));
 
           NodeRollout rollout = new BasicNodeRollout();
@@ -227,6 +232,10 @@ public class KubernetesClusterCreateTaskService extends StatefulService {
           rolloutInput.vmNetworkId = cluster.vmNetworkId;
           rolloutInput.nodeCount = ClusterManagerConstants.Kubernetes.MASTER_COUNT;
           rolloutInput.nodeType = NodeType.KubernetesMaster;
+          List<String> ips = NodeTemplateUtils.deserializeAddressList(
+                  cluster.extendedProperties.get(ClusterManagerConstants.EXTENDED_PROPERTY_ETCD_IPS));
+          rolloutInput.ipEtcd = ips.get(0);
+          rolloutInput.ipMaster = cluster.extendedProperties.get(ClusterManagerConstants.EXTENDED_PROPERTY_MASTER_IP);
           rolloutInput.nodeProperties = KubernetesMasterNodeTemplate.createProperties(
               NodeTemplateUtils.deserializeAddressList(
                   cluster.extendedProperties.get(ClusterManagerConstants.EXTENDED_PROPERTY_ETCD_IPS)),
@@ -283,6 +292,10 @@ public class KubernetesClusterCreateTaskService extends StatefulService {
           rolloutInput.vmNetworkId = cluster.vmNetworkId;
           rolloutInput.nodeCount = MINIMUM_INITIAL_WORKER_COUNT;
           rolloutInput.nodeType = NodeType.KubernetesSlave;
+          List<String> ips = NodeTemplateUtils.deserializeAddressList(
+                  cluster.extendedProperties.get(ClusterManagerConstants.EXTENDED_PROPERTY_ETCD_IPS));
+          rolloutInput.ipEtcd = ips.get(0);
+          rolloutInput.ipMaster = cluster.extendedProperties.get(ClusterManagerConstants.EXTENDED_PROPERTY_MASTER_IP);
           rolloutInput.serverAddress =
               cluster.extendedProperties.get(ClusterManagerConstants.EXTENDED_PROPERTY_MASTER_IP);
           rolloutInput.nodeProperties = KubernetesWorkerNodeTemplate.createProperties(
@@ -350,7 +363,7 @@ public class KubernetesClusterCreateTaskService extends StatefulService {
    */
   private void updateExtendedProperties(final KubernetesClusterCreateTask currentState) {
 
-    //sendRequest(HostUtils.getCloudStoreHelper(this)
+	  //sendRequest(HostUtils.getCloudStoreHelper(this)
 	  sendRequest(HostUtils.createCloudStoreHelper(this)
         .createGet(UriUtils.buildUriPath(ClusterServiceFactory.SELF_LINK, currentState.clusterId))
         .setReferer(getUri())

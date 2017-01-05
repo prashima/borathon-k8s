@@ -16,8 +16,10 @@ public class VcsProperties extends Properties {
 	private static String VCS_STORAGE_PATH_KEY = "vcsStoragePath";
 	private static String CHECK_KUBE_PATH_KEY = "cubeStatusPath";
 	private static String TENANT_SUPPORT_ENABLED = "tenantSupportEnabled";
+	private static String VCH_CLIENT_ENABLED = "vchClientEnabled";
 	private static String DOCKER_ENGINE_IP = "dockerEngineIp";
 	private static String DOCKER_ENGINE_PORT = "dockerEnginePort";
+	private static String DOCKER_BINARY = "dockerBinary";
 
 	public static synchronized void init(String file) throws Exception {
 		logger.info("Initializing VcsProperties with {}", file);
@@ -73,5 +75,20 @@ public class VcsProperties extends Properties {
 			port = "2376";
 		}
 		return port;
+	}
+
+	public static boolean isVchClientEnabled() {
+		if (instance == null) {
+			throw new RuntimeException("dockerEnginePort not initialized!!");
+		}
+		String vchClientEnabled = instance.getProperty(VCH_CLIENT_ENABLED, "true");
+		return Boolean.parseBoolean(vchClientEnabled);
+	}
+
+	public static String getDockerBinary() {
+		if (instance == null) {
+			throw new RuntimeException("dockerBinary not initialized!!");
+		}
+		return instance.getProperty(DOCKER_BINARY, "/usr/local/bin/docker");
 	}
 }

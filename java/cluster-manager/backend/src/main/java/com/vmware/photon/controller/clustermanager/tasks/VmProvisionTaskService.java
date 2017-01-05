@@ -196,10 +196,14 @@ public class VmProvisionTaskService extends StatefulService {
       if (VcsProperties.isTenantSupportEnabled()) {
     	  tenantId = currentState.projectId;
       }
-      HostUtils.getVcClient().createVmAsync(
-          tenantId,
-          composeVmCreateSpec(tenantId, currentState),
-          callback);
+
+      if (VcsProperties.isVchClientEnabled()) {
+				HostUtils.getVchClient().craeteContainer(
+						composeVmCreateSpec(null, currentState), callback);
+      } else {
+				HostUtils.getVcClient().createVmAsync(tenantId,
+						composeVmCreateSpec(tenantId, currentState), callback);
+      }
     } catch (Throwable ex) {
       failTask(ex);
     }
@@ -224,6 +228,8 @@ public class VmProvisionTaskService extends StatefulService {
     spec.setTags(currentState.vmTags);
     spec.setSourceImageId(currentState.imageId);
     spec.setNodeType(currentState.nodeType.name());
+    spec.setIpEtcd(currentState.ipEtcd);
+    spec.setIpMaster(currentState.ipMaster);
     if (tenantSpec != null) {
     	spec.setTenantResourcePool(tenantSpec.getRes()[0].getTenantResourcePoolMoId());
     }
@@ -260,7 +266,14 @@ public class VmProvisionTaskService extends StatefulService {
    */
   private void createIsoFile(final State currentState) throws Throwable {
 
-    final File isoFile = new File("/tmp",
+	// This step is a no-op when is VCH enabled.
+	if (VcsProperties.isVchClientEnabled()) {
+		processTask(null /*result*/, currentState,
+	            buildPatch(TaskState.TaskStage.STARTED, State.TaskState.SubStage.START_VM));
+		return;
+	}
+
+	final File isoFile = new File("/tmp",
         CONFIG_FILENAME + "-" + currentState.vmId + ".iso");
     final File userDataConfigFile = new File(HostUtils.getClusterManagerScriptsDirectory(),
         CONFIG_FILENAME + "-user-data-" + currentState.vmId + ".yml");
@@ -372,7 +385,14 @@ public class VmProvisionTaskService extends StatefulService {
    * @param currentState Supplies the current state object.
    */
   private void startVm(State currentState) {
-    try {
+	// This step is a no-op when is VCH enabled.
+	if (VcsProperties.isVchClientEnabled()) {
+		processTask(null, currentState,
+                buildPatch(TaskState.TaskStage.STARTED, State.TaskState.SubStage.VERIFY_VM));
+		return;
+	}
+
+	try {
       HostUtils.getVcClient().performStartOperationAsync(
           currentState.vmId,
           new FutureCallback<Task>() {
@@ -394,7 +414,7 @@ public class VmProvisionTaskService extends StatefulService {
   }
 
   private void processTask(Task task, final State currentState, final State patchState) {
-	  if (currentState.vmId == null) {
+	  if (currentState.vmId == null && task != null) {
 	     patchState.vmId = task.getEntity().getId();
 	  }
 	  TaskUtils.sendSelfPatch(VmProvisionTaskService.this, patchState);  
@@ -637,7 +657,13 @@ public class VmProvisionTaskService extends StatefulService {
     
     @Immutable
     public NodeType nodeType;
-    
+
+    @Immutable
+    public String ipEtcd;
+
+    @Immutable
+    public String ipMaster;
+
     @Immutable
     public Map<String, String> nodeProperties;
 

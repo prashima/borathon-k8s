@@ -143,6 +143,10 @@ public class SlavesNodeRollout implements NodeRollout {
     startState.vmName = template.getVmName(nodeProperties);
     startState.userData = template.createUserDataTemplate(scriptDirectory, nodeProperties);
     startState.metaData = template.createMetaDataTemplate(scriptDirectory, nodeProperties);
+    startState.nodeType = input.nodeType;
+    startState.ipEtcd = input.ipEtcd;
+    startState.ipMaster = input.ipMaster;
+    startState.nodeProperties = nodeProperties;
 
     TaskUtils.startTaskAsync(
         service,

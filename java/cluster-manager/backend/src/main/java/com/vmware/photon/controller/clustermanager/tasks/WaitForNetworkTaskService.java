@@ -134,7 +134,8 @@ public class WaitForNetworkTaskService extends StatefulService {
   private void callGetNetworks(final State currentState) throws IOException {
 
 //    HostUtils.getApiClient(this).getVmApi().getNetworksAsync(currentState.vmId,
-	  HostUtils.getVcClient().getNetworksAsync(currentState.vmId,
+	  //HostUtils.getVcClient().getNetworksAsync(currentState.vmId,
+	  HostUtils.getVchClient().getNetworks(currentState.vmId,
         new FutureCallback<Task>() {
           @Override
           public void onSuccess(@Nullable Task task) {
@@ -189,7 +190,8 @@ public class WaitForNetworkTaskService extends StatefulService {
       // The OUI is a standard prefix to indicate the vendor that generated the MAC address
       // In the past we looked for a port group (network name) but that wasn't always reliably
       // reported. This should be reliable.
-      if (isVmwareMacAddress(networkConnection) && !Strings.isNullOrEmpty(networkConnection.getIpAddress())) {
+      //if (isVmwareMacAddress(networkConnection) && !Strings.isNullOrEmpty(networkConnection.getIpAddress())) {
+    	if (!Strings.isNullOrEmpty(networkConnection.getIpAddress())) {
         State patchState = buildPatch(TaskState.TaskStage.FINISHED, null);
         patchState.vmIpAddress = networkConnection.getIpAddress();
         TaskUtils.sendSelfPatch(this, patchState);

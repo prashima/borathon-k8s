@@ -14,6 +14,7 @@
 package com.vmware.photon.controller.clustermanager.clients;
 
 import com.vmware.photon.controller.api.client.RestClient;
+import com.vmware.photon.controller.common.utils.VcsProperties;
 import com.vmware.photon.controller.xenon.client.GeneralApiClient;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -61,7 +62,12 @@ public class KubernetesClient {
       final String connectionString,
       final FutureCallback<String> callback) throws IOException {
 
-    //final RestClient restClient = new RestClient(connectionString, this.httpClient);
+	  if (VcsProperties.isVchClientEnabled()) {
+		  callback.onSuccess("1.4.6");
+		  return;
+	  }
+
+	  //final RestClient restClient = new RestClient(connectionString, this.httpClient);
 
     FutureCallback<Version> futureCallback =
         new FutureCallback<Version>() {

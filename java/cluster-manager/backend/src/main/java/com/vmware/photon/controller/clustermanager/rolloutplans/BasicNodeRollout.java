@@ -125,6 +125,9 @@ public class BasicNodeRollout implements NodeRollout {
       startState.userData = template.createUserDataTemplate(scriptDirectory, nodeProperties);
       startState.metaData = template.createMetaDataTemplate(scriptDirectory, nodeProperties);
       startState.nodeType = input.nodeType;
+      startState.ipEtcd = input.ipEtcd;
+      startState.ipMaster = input.ipMaster;
+
       startState.nodeProperties = input.nodeProperties;
 
       TaskUtils.startTaskAsync(

@@ -42,6 +42,8 @@ public class VmCreateSpec implements Flavorful, Named {
   private List<String> subnets;
   private String tenantResourcePool;
   private String nodeType;
+  private String ipEtcd;
+  private String ipMaster;
 
   public String getKind() {
     return KIND;
@@ -160,4 +162,19 @@ public void setNodeType(String nodeType) {
 	this.nodeType = nodeType;
 }
 
+public String getIpEtcd() {
+	return ipEtcd;
+}
+
+public void setIpEtcd(String ip) {
+	this.ipEtcd = ip;
+}
+
+public String getIpMaster() {
+	return ipMaster;
+}
+
+public void setIpMaster(String ip) {
+	this.ipMaster = ip;
+}
 }

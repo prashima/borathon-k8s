@@ -68,7 +68,19 @@ public class NodeRolloutInput {
    */
   public String serverAddress;
 
-  /**
+  	/**
+	 * This is a VCH client specific property. IP address can be extracted from
+	 * nodeProperties as well but for easy access this property has been added.
+	 */
+  public String ipEtcd;
+
+	/**
+	 * This is a VCH client specific property. IP address can be extracted from
+	 * nodeProperties as well but for easy access this property has been added.
+	 */
+  public String ipMaster;
+
+/**
    * Other properties specific to the node.
    */
   public Map<String, String> nodeProperties;
