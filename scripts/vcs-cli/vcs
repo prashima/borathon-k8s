@@ -20,13 +20,12 @@ Derived from vmdkops_admin.py
 
 '''
 
-# Notes to developer -  how to change code:
-# 1. modify commands() table to parse desired syntax (function help tells  you how)
-# 2. implement or update functions mentioned in the commands() table to carry the actions
+# This file contains 3 parts:
+#   Section 1. Generic support for defining command line arguments
+#   Section 2. Generic support for printing tables
+#   Section 3. Arguments definition and code for VCS CLI
 #
-# Note that the current code already represents
-# VCS cluster command line control, but implementation is stubbed
-#
+# In order to change VCS specific part, go directly to Section 3.
 
 
 import os
@@ -34,12 +33,16 @@ import os.path
 import argparse
 import sys
 import json
+import subprocess # needed for CliTable to get screen width info
 import six
 # Note: We assume 'requests' module is pre-installed (generally true).
 # If not, 'pip install requests' is a prerequisite.
 import requests
 
-import cli_table
+
+# Section 1 - generic support for defining command line arguments
+# ================================================================
+
 
 def commands():
     """
@@ -109,6 +112,281 @@ def commands():
              vcs-admin cluster: error: too few arguments
              ```
     """
+    return vcs_commands()
+
+
+def create_parser():
+    """ Create a CLI parser via argparse based on the dictionary returned from commands() """
+    parser = argparse.ArgumentParser(description='Manage VCS clusters')
+    add_subparser(parser, commands())
+    return parser
+
+
+def add_subparser(parser, cmds_dict):
+    """ Recursively add subcommand parsers based on a dictionary of commands """
+    subparsers = parser.add_subparsers()
+    for cmd, attributes in cmds_dict.items():
+        subparser = subparsers.add_parser(cmd, help=attributes['help'])
+        if 'func' in attributes:
+            subparser.set_defaults(func=attributes['func'])
+        if 'args' in attributes:
+            for arg, opts in attributes['args'].items():
+                opts = build_argparse_opts(opts)
+                subparser.add_argument(arg, **opts)
+        if 'cmds' in attributes:
+            add_subparser(subparser, attributes['cmds'])
+
+
+def build_argparse_opts(opts):
+    if 'choices' in opts:
+        opts['type'] = make_list_of_values(opts['choices'])
+        help_opts = opts['help']
+        opts['help'] = '{0}: Choices = {1}'.format(help_opts, opts['choices'])
+        del opts['choices']
+    return opts
+
+
+def parse_args():
+    parser = create_parser()
+    args = parser.parse_args()
+    if args != argparse.Namespace():
+        return args
+    else:
+        parser.print_help()
+
+
+def comma_seperated_string(string):
+    return string.split(',')
+
+
+def make_list_of_values(allowed):
+    """
+    Take a list of allowed values for an option and return a function that can be
+    used to typecheck a string of given values and ensure they match the allowed
+    values.  This is required to support options that take comma separated lists
+    such as --type in 'cluster create --type=kubernetes,mesos,swarm'
+    """
+
+    def list_of_values(string):
+        given = string.split(',')
+        for g in given:
+            if g not in allowed:
+                msg = (
+                    'invalid choices: {0} (choices must be a comma separated list of '
+                    'only the following words \n {1}. '
+                    'No spaces are allowed between choices.)').format(g, repr(allowed).replace(' ', ''))
+                raise argparse.ArgumentTypeError(msg)
+        return given
+
+    return list_of_values
+
+
+def output(fmt_string, *args):
+    """Trivial wraper for printing stuff on the screen"""
+    if args:
+        six.print_(fmt_string % args)
+    else:
+        six.print_(fmt_string)
+
+
+# Section 2 - Generic support for printing tables
+#==============================================================================
+
+
+# A small class for creating ascii based tables
+
+class CliTable:
+    """Generic support for formatting ascii tables. Modified from
+    cli_table module to allow single file cmd line. Using static methods only"""
+
+    SPACES = 2
+
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def create(header, data, print_header=True):
+        """Create a printable ascii table as a string and return it
+        @param header - a list of strings for naming columns
+        @param data - a list of rows (a list of strings) containing data
+
+        Note that the length of each row must equal the length of the header list
+
+        Warning: This function does not attempt to fit any fixed width terminal. It
+        only formats the data given into columns and does not do any truncation.
+        """
+        max_sizes = CliTable.max_column_sizes(header, data)
+        # Subtract the number of spaces between columns from the term width
+        width = CliTable.term_width() - CliTable.SPACES * (len(header) - 1)
+        sizes = CliTable.shrink_to_fit(max_sizes, width)
+        header = CliTable.truncate([header], sizes)[0]
+        data = CliTable.truncate(data, sizes)
+        return CliTable.format_table2string(header, data, sizes, print_header)
+
+    @staticmethod
+    def term_width():
+        """
+        Return the width of the terminal. This function assumes stty exists and is runnable. If that is
+        not the case than a width of 80 characters is returned as a guess/default. This should never
+        happen as stty exists on ESX, Linux and OSX.
+        """
+        try:
+            # Get the number of rows and columns seperated by a space
+            output = subprocess.check_output("stty size".split())
+            return int(output.split()[1])
+        except subprocess.CalledProcessError:
+            return 80
+
+    @staticmethod
+    def shrink_to_fit(column_sizes, terminal_width):
+        """
+        If the total size of all columns exceeds the terminal width, then we need to shrink the
+        individual column sizes to fit. In most tables, there are one or two columns that are much
+        longer than the other columns. We therefore tailor the shrinking algorithm based on this
+        principle. The algorithm is as follows:
+
+        1) Truncate the longest column until either the columns all fit in the terminal width or
+           the size of the truncated column is equal to the next longest column.
+        2) If the columns fit from truncating we are done.
+        3) If the columns do not fit, shrink the now equally sized columns 1 char at a time until the
+           width fits or these columns equal size of the next smallest column.
+        4) Repeat steps 2 and 3 successively until a fit is found.
+
+        Note that there is the pathological case that the terminal is smaller than a single character
+        for all columns. Ignore this for now. The only way to handle it would be to print every column
+        on it's own line and truncate them to fit. This may be a useful enhancement to make later.
+        """
+        total_size = sum(column_sizes)
+        if total_size <= terminal_width:
+            return column_sizes
+
+        # Put the columns in sorted order (largest to smallest)
+        sorted_sizes = sorted(column_sizes, reverse=True)
+
+        # Find the index of each sorted column size in the original list and store it
+        # Zero out the value in the original list so that we cover duplicate values, since list.index(val)
+        # only finds the first instance.
+        indexes = []
+        for size in sorted_sizes:
+            index = column_sizes.index(size)
+            indexes.append(index)
+            column_sizes[index] = 0
+
+        # Shrink the sorted columns until they fit the terminal width
+        while total_size > terminal_width:
+            largest = sorted_sizes[0]
+            num_largest_columns = sorted_sizes.count(largest)
+            if num_largest_columns != len(sorted_sizes):
+                next_largest = sorted_sizes[num_largest_columns]
+            else:
+                # All columns are the same size, so just shrink each one until
+                # they fit
+                next_largest = 0
+
+            to_remove = total_size - terminal_width
+            gap = largest - next_largest
+
+            if gap * num_largest_columns > to_remove:
+                # We can resize in this step and we are done
+                to_remove_per_column = int(to_remove / num_largest_columns)
+                remainder = to_remove % num_largest_columns
+                for i in range(num_largest_columns):
+                    sorted_sizes[i] = largest - to_remove_per_column
+                for i in range(remainder):
+                    sorted_sizes[i] = sorted_sizes[i] - 1
+            else:
+                # We need to remove the max number of chars until we get to the next largest size then
+                # try again
+                for i in range(num_largest_columns):
+                    sorted_sizes[i] = next_largest
+
+            total_size = sum(sorted_sizes)
+
+        # Put the shrunken column sizes in their proper index locations
+        for i in range(len(column_sizes)):
+            index = indexes[i]
+            column_sizes[index] = sorted_sizes[i]
+
+        return column_sizes
+
+    @staticmethod
+    def format_table2string(header, data, sizes, print_header):
+        """ Actually create the table as a string """
+        if print_header:
+            s = CliTable.value_row(header, sizes) + '\n'
+            s = s + CliTable.divider_row(sizes) + '\n'
+        else:
+            s = ""
+        for row in data:
+            s = s + CliTable.value_row(row, sizes) + '\n'
+        return s[:-1]
+
+    @staticmethod
+    def value_row(values, sizes):
+        """ Create a one line string of left justified values using the column sizes in sizes """
+        s = ''
+        for i in range(len(values)):
+            s = s + values[i].ljust(sizes[i] + CliTable.SPACES)
+        return s
+
+    @staticmethod
+    def divider_row(sizes):
+        """ Create a one line string of '-' characters of given length in each column """
+        s = ''
+        for i in range(len(sizes)):
+            s = s + '-'.ljust(sizes[i], '-') + '  '
+        return s
+
+    @staticmethod
+    def max_column_sizes(header, data):
+        """ Determine the maximum length for each column and return the lengths as a list """
+        sizes = [len(h) for h in header]
+        for row in data:
+            for i in range(len(header)):
+                if len(row[i]) > sizes[i]:
+                    sizes[i] = len(row[i])
+        return sizes
+
+    @staticmethod
+    def truncate(data, sizes):
+        """
+        @param data - A list of a list of values
+        @param sizes - A list of max sizes
+
+        Shrink each value in data to it's corresponding max size
+        Show truncation by replacing the last 2 characters with `..`
+        """
+        truncated = []
+        for row in data:
+            truncated_row = []
+            for i in range(len(sizes)):
+                size = sizes[i]
+                column = row[i]
+                if len(column) > size:
+                    truncated_row.append(column[:size - 2] + '..')
+                else:
+                    truncated_row.append(column)
+            truncated.append(truncated_row)
+        return truncated
+
+
+# Section 3 - VCS Command line implementation.
+# ============================================
+
+# First line to be printed for info
+VCS_CLI_INFO = "vSphere Container Service admin command line v0.1"
+
+# paths used in misc. requests
+VCS_CLUSTER_PATH = "/vcs/cloudstore/clusters"
+VCS_CLUSTER_CREATE = '/vcs/clustermanager/vcs-cluster-create'
+
+CODE_OK = 200  # http ok response
+
+
+def vcs_commands():
+    '''This function returns command line definition.
+    See commands() function docstring for more details'''
+
     return {
         #
         # cluster {create, update, rm , ls} - manipulates clusters
@@ -125,7 +403,8 @@ def commands():
                             'required': True
                         },
                         '--type': {
-                            # this one is not requires as we will use KUBERNETES by default
+                            # this one is not requires as we will use
+                            # KUBERNETES by default
                             'help': 'Type of the cluster',
                             'choices': ['KUBERNETES', 'MESOS', 'SWARM']
                         },
@@ -177,7 +456,7 @@ def commands():
                         '--uuid': {
                             'help': 'UUID of the cluster to be removed',
                             'required': True
-                      }
+                        }
                     }
                 },
                 'ls': {
@@ -187,7 +466,7 @@ def commands():
                             'help': 'Display selected columns',
                             'choices': all_ls_headers(),
                             'metavar': 'Col1,Col2,...'
-                            },
+                        },
                         '-q': {
                             'help': 'Do not print headers',
                             'action': 'store_true'
@@ -204,90 +483,8 @@ def commands():
     }
 
 
-def create_parser():
-    """ Create a CLI parser via argparse based on the dictionary returned from commands() """
-    parser = argparse.ArgumentParser(description='Manage VCS clusters')
-    add_subparser(parser, commands())
-    return parser
-
-
-def add_subparser(parser, cmds_dict):
-    """ Recursively add subcommand parsers based on a dictionary of commands """
-    subparsers = parser.add_subparsers()
-    for cmd, attributes in cmds_dict.items():
-        subparser = subparsers.add_parser(cmd, help=attributes['help'])
-        if 'func' in attributes:
-            subparser.set_defaults(func=attributes['func'])
-        if 'args' in attributes:
-            for arg, opts in attributes['args'].items():
-                opts = build_argparse_opts(opts)
-                subparser.add_argument(arg, **opts)
-        if 'cmds' in attributes:
-            add_subparser(subparser, attributes['cmds'])
-
-
-def build_argparse_opts(opts):
-    if 'choices' in opts:
-        opts['type'] = make_list_of_values(opts['choices'])
-        help_opts = opts['help']
-        opts['help'] = '{0}: Choices = {1}'.format(help_opts, opts['choices'])
-        del opts['choices']
-    return opts
-
-
-def parse_args():
-    parser = create_parser()
-    args = parser.parse_args()
-    if args != argparse.Namespace():
-       return args
-    else:
-       parser.print_help()
-
-
-def comma_seperated_string(string):
-    return string.split(',')
-
-def make_list_of_values(allowed):
-    """
-    Take a list of allowed values for an option and return a function that can be
-    used to typecheck a string of given values and ensure they match the allowed
-    values.  This is required to support options that take comma separated lists
-    such as --type in 'cluster create --type=kubernetes,mesos,swarm'
-    """
-
-    def list_of_values(string):
-        given = string.split(',')
-        for g in given:
-            if g not in allowed:
-                msg = (
-                    'invalid choices: {0} (choices must be a comma separated list of '
-                    'only the following words \n {1}. '
-                    'No spaces are allowed between choices.)').format(g, repr(allowed).replace(' ', ''))
-                raise argparse.ArgumentTypeError(msg)
-        return given
-
-    return list_of_values
-
-def output(fmt_string, *args):
-    """Trivial wraper for printing stuff on the screen"""
-    if args:
-        six.print_(fmt_string % args)
-    else:
-        six.print_(fmt_string)
-
-#==============================================================================
-
-# Command line implementations.
-
-# First line to be printed for statu  
-CLI_INFO = "vSphere Container Service admin command line v0.1"
-
-# paths to be used in URLs
-CLUSTERS_PATH = "/vcs/cloudstore/clusters"
-
-CODE_OK = 200 # http ok response
-
 def init():
+    '''entry point'''
     # Make sure VCS_HOST is set, and exit if it's not
     try:
         global VCS_HOST
@@ -309,27 +506,27 @@ def cluster_create(args):
 
     # create and post the request
     create_spec = {
-        "clusterState" : "CREATING",
-        "clusterName" : args.name,
-        "clusterType" : args.type,
-        "imageId" : "Kubernetes-image.vmdk",
-        "projectId" : "k8s-project",
-        "vmNetworkId" : "VM Network",
-        "diskFlavorName" : "Disk flavor",
-        "masterVmFlavorName" : "Master flavor",
-        "otherVmFlavorName" : "Slave Flavor",
-        "slaveCount" : str(args.slaves),
-        "extendedProperties" : {
-            "etcd_ips" : args.etcd_ips,
-            "dns" : "10.20.145.1",
-            "gateway" : "10.20.107.253",
-            "netmask" : "255.255.252.0",
-            "master_ip" : args.master_ip,
-            "container_network" : args.container_network
+        "clusterState": "CREATING",
+        "clusterName": args.name,
+        "clusterType": args.type,
+        "imageId": "Kubernetes-image.vmdk",
+        "projectId": "k8s-project",
+        "vmNetworkId": "VM Network",
+        "diskFlavorName": "Disk flavor",
+        "masterVmFlavorName": "Master flavor",
+        "otherVmFlavorName": "Slave Flavor",
+        "slaveCount": str(args.slaves),
+        "extendedProperties": {
+            "etcd_ips": args.etcd_ips,
+            "dns": "10.20.145.1",
+            "gateway": "10.20.107.253",
+            "netmask": "255.255.252.0",
+            "master_ip": args.master_ip,
+            "container_network": args.container_network
         }
     }
 
-    url = VCS_HOST + '/vcs/clustermanager/vcs-cluster-create'
+    url = VCS_HOST + VCS_CLUSTER_CREATE
     resp = requests.post(url, data=json.dumps(create_spec))
     if resp.status_code != CODE_OK:
         resp.raise_for_status()
@@ -339,7 +536,7 @@ def cluster_create(args):
 def cluster_ls(args):
     """Lists clusters managed by VCS"""
 
-    resp = requests.get(VCS_HOST + CLUSTERS_PATH)
+    resp = requests.get(VCS_HOST + VCS_CLUSTER_PATH)
     if resp.status_code != CODE_OK:
         resp.raise_for_status()
     known_clusters = resp.json()['documentLinks']
@@ -355,13 +552,14 @@ def cluster_ls(args):
     else:
         print_header = True
 
-    output(cli_table.create(headers, rows, print_header))
+    output(CliTable.create(headers, rows, print_header))
 
 
 def all_ls_headers():
     """ Return a list of all header for ls -l """
-    return ['Name', 'State', 'Health', 'Slaves', 'ETCD_IP',\
+    return ['Name', 'State', 'Health', 'Slaves', 'ETCD_IP',
             'Master_IP', 'Cont_Network', 'UUID']
+
 
 def generate_ls_rows(known_clusters):
     """ Gather all cluster info into rows that can be used to format a table """
@@ -403,7 +601,7 @@ def ls_dash_c(columns, clusters):
 def cluster_rm(args):
     """Removes a cluster managed by VCS. That includes VM deletion"""
     cluster_uuid = args.uuid
-    url = VCS_HOST + CLUSTERS_PATH + "/" + cluster_uuid
+    url = VCS_HOST + VCS_CLUSTER_PATH + "/" + cluster_uuid
     resp = requests.delete(url)
     if resp.status_code != CODE_OK:
         # This means something went wrong.
@@ -411,19 +609,21 @@ def cluster_rm(args):
         resp.raise_for_status()
     output("Cluster %s deleted", cluster_uuid)
 
+
 def cluster_scale(args):
     """Re-configures a cluster based on the new config passed in args"""
     output("Scaling cluster '%s' to %d slaves. (NOT IMPLEMENTED YET)",
            args.uuid, args.slaves)
 
+
 def vcs_info(args):
     """Reports overall status of VCS service"""
-    output(CLI_INFO)
+    output(VCS_CLI_INFO)
     resp = requests.get(VCS_HOST)
     if resp.status_code != CODE_OK:
         output("No response from %s", VCS_HOST)
         resp.raise_for_status()
-    elif CLUSTERS_PATH not in resp.json()['documentLinks']:
+    elif VCS_CLUSTER_PATH not in resp.json()['documentLinks']:
         output("VCS seems down - it's missing from services list on %s", VCS_HOST)
     else:
         output("VCS is certainly up, and hopefully healthy on %s", VCS_HOST)
@@ -434,4 +634,3 @@ if __name__ == '__main__':
     cmd_args = parse_args()
     if cmd_args:
         cmd_args.func(cmd_args)
-
