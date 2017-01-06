@@ -28,15 +28,16 @@ Derived from vmdkops_admin.py
 # VCS cluster command line control, but implementation is stubbed
 #
 
-# Note: We assume 'requests' module is preinstalled (generally true).
-# If not, 'pip install requests' is a prerequisite. 
-# As an alternative, we can use python3 with urllib.request.
-import requests
-import six
+
 import os
 import os.path
-import sys
 import argparse
+import sys
+import json
+import six
+# Note: We assume 'requests' module is pre-installed (generally true).
+# If not, 'pip install requests' is a prerequisite.
+import requests
 
 import cli_table
 
@@ -155,10 +156,10 @@ def commands():
                 },
                 'scale': {
                     'func': cluster_scale,
-                    'help': 'Scale an existing cluster',
+                    'help': 'Scale an existing cluster (Not Implemented Yet)',
                     'args': {
-                        '--name': {
-                            'help': 'The name of the cluster',
+                        '--uuid': {
+                            'help': 'The UUID of the cluster',
                             'required': True
                         },
                         '--slaves': {
@@ -284,6 +285,8 @@ CLI_INFO = "vSphere Container Service admin command line v0.1"
 # paths to be used in URLs
 CLUSTERS_PATH = "/vcs/cloudstore/clusters"
 
+CODE_OK = 200 # http ok response
+
 def init():
     # Make sure VCS_HOST is set, and exit if it's not
     try:
@@ -325,25 +328,20 @@ def cluster_create(args):
             "container_network" : args.container_network
         }
     }
-    output(create_spec)
-    url = VCS_HOST + '/vcs/clustermanager/vcs-cluster-create'
-    resp = requests.post(url, data=create_spec)
 
-    if resp.status_code != 201:
-        # This means something went wrong.
-        output("Failed to POST to %s. Error %s (%s)", url, resp.status_code, resp.reason)
-        output("create spec: %s", create_spec)
-    else:
-        output('done')
+    url = VCS_HOST + '/vcs/clustermanager/vcs-cluster-create'
+    resp = requests.post(url, data=json.dumps(create_spec))
+    if resp.status_code != CODE_OK:
+        resp.raise_for_status()
+    output("Cluster %s created", args.name)
 
 
 def cluster_ls(args):
     """Lists clusters managed by VCS"""
 
     resp = requests.get(VCS_HOST + CLUSTERS_PATH)
-    if resp.status_code != 200:
-        # This means something went wrong. TBD: useful err. msg
-        raise Exception(resp.status_code)
+    if resp.status_code != CODE_OK:
+        resp.raise_for_status()
     known_clusters = resp.json()['documentLinks']
 
     if args.c:
@@ -355,8 +353,10 @@ def cluster_ls(args):
     if args.q:
         print_header = False
     else:
-        print_header=True
+        print_header = True
+
     output(cli_table.create(headers, rows, print_header))
+
 
 def all_ls_headers():
     """ Return a list of all header for ls -l """
@@ -405,22 +405,24 @@ def cluster_rm(args):
     cluster_uuid = args.uuid
     url = VCS_HOST + CLUSTERS_PATH + "/" + cluster_uuid
     resp = requests.delete(url)
-    if resp.status_code != 200:
+    if resp.status_code != CODE_OK:
         # This means something went wrong.
-        output("Failed to DELETE cluster with UUID %s", uuid)
-        raise Exception(resp.status_code)
+        output("Failed to DELETE cluster with UUID %s", cluster_uuid)
+        resp.raise_for_status()
     output("Cluster %s deleted", cluster_uuid)
 
 def cluster_scale(args):
     """Re-configures a cluster based on the new config passed in args"""
-    output("Scaling cluster '%s' to %d slaves. (NOT IMPLEMENTED YET)", args.name, args.slaves)
+    output("Scaling cluster '%s' to %d slaves. (NOT IMPLEMENTED YET)",
+           args.uuid, args.slaves)
 
 def vcs_info(args):
     """Reports overall status of VCS service"""
     output(CLI_INFO)
     resp = requests.get(VCS_HOST)
-    if resp.status_code != 200:
+    if resp.status_code != CODE_OK:
         output("No response from %s", VCS_HOST)
+        resp.raise_for_status()
     elif CLUSTERS_PATH not in resp.json()['documentLinks']:
         output("VCS seems down - it's missing from services list on %s", VCS_HOST)
     else:
@@ -429,7 +431,7 @@ def vcs_info(args):
 
 if __name__ == '__main__':
     init()
-    args = parse_args()
-    if args:
-        args.func(args)
+    cmd_args = parse_args()
+    if cmd_args:
+        cmd_args.func(cmd_args)
 
