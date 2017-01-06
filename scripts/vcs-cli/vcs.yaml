@@ -1,12 +1,15 @@
 #
-# YAML for VSC API swagger definition 
+# YAML for VSC API swagger definition
 #
 swagger: '2.0'
 
 info:
   version: '0.0.1'
-  title: VSphere Cluster Services (VCS) API
-  description: Provision and manage Kubernetes and other clusters running on VMWare VSphere
+  title: (Work In Progress) VSphere Cluster Services (VCS) API
+  description:
+    Provision and manage Kubernetes and other clusters running on VMWare VSphere
+
+# set 'host:' to point to a reachable host for try outs
   
 schemes:
   - http

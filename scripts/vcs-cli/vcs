@@ -379,9 +379,7 @@ VCS_CLI_INFO = "vSphere Container Service admin command line v0.1"
 # paths used in misc. requests
 VCS_CLUSTER_PATH = "/vcs/cloudstore/clusters"
 VCS_CLUSTER_CREATE = '/vcs/clustermanager/vcs-cluster-create'
-
-CODE_OK = 200  # http ok response
-
+VCS_CLUSTER_RESIZE = '/vcs/clustermanager/cluster-resize-tasks'
 
 def vcs_commands():
     '''This function returns command line definition.
@@ -408,7 +406,7 @@ def vcs_commands():
                             'help': 'Type of the cluster',
                             'choices': ['KUBERNETES', 'MESOS', 'SWARM']
                         },
-                        '--slaves': {
+                        '--slave_count': {
                             'help': "How many slave (minion) nodes to create. Default 1",
                             'metavar': 'COUNT',
                             'default': 1,
@@ -425,27 +423,22 @@ def vcs_commands():
                             'help': 'Static IP to use for `kube master.',
                             'metavar': 'NETWORK',
                             'required': True
-                        },
-                        '--container_network': {
-                            'help': 'Inter-container network mask, e.g. 10.20.0.1/20',
-                            'metavar': 'NETWORK/MASK',
-                            'required': True
                         }
                     }
                 },
-                'scale': {
-                    'func': cluster_scale,
-                    'help': 'Scale an existing cluster (Not Implemented Yet)',
+                'resize': {
+                    'func': cluster_resize,
+                    'help': 'Resize an existing cluster',
                     'args': {
                         '--uuid': {
                             'help': 'The UUID of the cluster',
                             'required': True
                         },
-                        '--slaves': {
+                        '--slave_count': {
                             'help': "How many slave (minion) nodes to scale to.",
                             'metavar': 'COUNT',
-                            'default': 1,
-                            'type': int
+                            'type': int,
+                            'required': True
                         }
                     }
                 },
@@ -473,6 +466,25 @@ def vcs_commands():
                         }
                     },
                     'help': 'List clusters managed by VCS'
+                },
+                'lsvm': {
+                    'func': cluster_lsvm,
+                    'args': {
+                        # '-c': {
+                        #     'help': 'Display selected columns ',
+                        #     'choices': all_ls_headers(),
+                        #     'metavar': 'Col1,Col2,...'
+                        # },
+                        '--uuid': {
+                            'help': 'UUID of the cluster for which VMs are listed',
+                            'required': True
+                        },
+                        '-q': {
+                            'help': 'Do not print headers',
+                            'action': 'store_true'
+                        }
+                    },
+                    'help': 'List VMs in a cluster'
                 }
             }
         },
@@ -500,45 +512,50 @@ def cluster_create(args):
 
     # set defaults
     if not args.type:
-        args.type = "KUBERNETES"
-    if not args.slaves:
-        args.slaves = 1
+        args.type = ["KUBERNETES"]
+    cluster_type = args.type[0]
+
+    # for now we do not support other clusters:
+    if cluster_type != "KUBERNETES":
+        output("For now we only support KUBERNETES - type '%s' is not supported yet",
+               cluster_type)
+        return
 
     # create and post the request
+    # hardcoded stuff is legacy (from Photon Controller POC)
+    # and eventually need to be dropped from the API
     create_spec = {
         "clusterState": "CREATING",
         "clusterName": args.name,
-        "clusterType": args.type,
+        "clusterType": cluster_type,
         "imageId": "Kubernetes-image.vmdk",
         "projectId": "k8s-project",
         "vmNetworkId": "VM Network",
         "diskFlavorName": "Disk flavor",
         "masterVmFlavorName": "Master flavor",
         "otherVmFlavorName": "Slave Flavor",
-        "slaveCount": str(args.slaves),
+        "slaveCount": str(args.slave_count),
         "extendedProperties": {
             "etcd_ips": args.etcd_ips,
             "dns": "10.20.145.1",
             "gateway": "10.20.107.253",
             "netmask": "255.255.252.0",
             "master_ip": args.master_ip,
-            "container_network": args.container_network
+            "container_network": "10.20.107.253/20"
         }
     }
 
     url = VCS_HOST + VCS_CLUSTER_CREATE
     resp = requests.post(url, data=json.dumps(create_spec))
-    if resp.status_code != CODE_OK:
-        resp.raise_for_status()
-    output("Cluster %s created", args.name)
+    resp.raise_for_status()
+    output("Cluster %s creation initiated.", args.name)
 
 
 def cluster_ls(args):
     """Lists clusters managed by VCS"""
 
     resp = requests.get(VCS_HOST + VCS_CLUSTER_PATH)
-    if resp.status_code != CODE_OK:
-        resp.raise_for_status()
+    resp.raise_for_status()
     known_clusters = resp.json()['documentLinks']
 
     if args.c:
@@ -547,18 +564,13 @@ def cluster_ls(args):
         headers = all_ls_headers()
         rows = generate_ls_rows(known_clusters)
 
-    if args.q:
-        print_header = False
-    else:
-        print_header = True
-
-    output(CliTable.create(headers, rows, print_header))
+    output(CliTable.create(headers, rows, not args.q))
 
 
 def all_ls_headers():
     """ Return a list of all header for ls -l """
-    return ['Name', 'State', 'Health', 'Slaves', 'ETCD_IP',
-            'Master_IP', 'Cont_Network', 'UUID']
+    return ['Name', 'Type', 'State', 'Health', 'Slave_Count', 'ETCD_IP',
+            'Master_IP', 'UUID']
 
 
 def generate_ls_rows(known_clusters):
@@ -570,12 +582,12 @@ def generate_ls_rows(known_clusters):
         ext_info = cluster_info['extendedProperties']
         rows.append([
             cluster_info['clusterName'],
+            cluster_info['clusterType'],
             cluster_info['clusterState'],
             cluster_info['clusterhealth'],
             str(cluster_info['slaveCount']),
             ext_info['etcd_ips'],
             ext_info['master_ip'],
-            ext_info['container_network'],
             os.path.basename(cluster_info['documentSelfLink'])
         ])
     return rows
@@ -598,32 +610,51 @@ def ls_dash_c(columns, clusters):
     return (headers, rows)
 
 
+def cluster_lsvm(args):
+    """Lists VMs running under a specified cluster"""
+
+    cluster_uuid = args.uuid
+    resp = requests.get(get_cluster_path_uuid(cluster_uuid) + "/vms")
+    resp.raise_for_status()
+
+    headers = ['VM_Name']
+    vms = []
+    for v in resp.json():
+        vms.append([v["vmName"]])
+    output(CliTable.create(headers, vms, not args.q))
+
+
+def get_cluster_path_uuid(cluster_uuid):
+    '''constructs URL for cluster manipulation'''
+    return VCS_HOST + VCS_CLUSTER_PATH + "/" + cluster_uuid
+
+
 def cluster_rm(args):
     """Removes a cluster managed by VCS. That includes VM deletion"""
     cluster_uuid = args.uuid
-    url = VCS_HOST + VCS_CLUSTER_PATH + "/" + cluster_uuid
+    url = get_cluster_path_uuid(cluster_uuid)
     resp = requests.delete(url)
-    if resp.status_code != CODE_OK:
-        # This means something went wrong.
-        output("Failed to DELETE cluster with UUID %s", cluster_uuid)
-        resp.raise_for_status()
+    resp.raise_for_status()
     output("Cluster %s deleted", cluster_uuid)
 
 
-def cluster_scale(args):
+def cluster_resize(args):
     """Re-configures a cluster based on the new config passed in args"""
-    output("Scaling cluster '%s' to %d slaves. (NOT IMPLEMENTED YET)",
-           args.uuid, args.slaves)
+    cluster_uuid = args.uuid
+    url = VCS_HOST + VCS_CLUSTER_RESIZE
+    data = {"clusterId": args.uuid, "newSlaveCount": args.slave_count}
+    resp = requests.post(url, json.dumps(data))
+    resp.raise_for_status()
+    output("Submitted request to resize cluster '%s' to %d slaves. ",
+           cluster_uuid, args.slave_count)
 
 
 def vcs_info(args):
     """Reports overall status of VCS service"""
     output(VCS_CLI_INFO)
     resp = requests.get(VCS_HOST)
-    if resp.status_code != CODE_OK:
-        output("No response from %s", VCS_HOST)
-        resp.raise_for_status()
-    elif VCS_CLUSTER_PATH not in resp.json()['documentLinks']:
+    resp.raise_for_status()
+    if VCS_CLUSTER_PATH not in resp.json()['documentLinks']:
         output("VCS seems down - it's missing from services list on %s", VCS_HOST)
     else:
         output("VCS is certainly up, and hopefully healthy on %s", VCS_HOST)
@@ -633,4 +664,10 @@ if __name__ == '__main__':
     init()
     cmd_args = parse_args()
     if cmd_args:
-        cmd_args.func(cmd_args)
+        try:
+            cmd_args.func(cmd_args)
+        # TBD: better error handling. Can do in command to provide 
+        # individualized info, or here by looking at different Exception
+        # types
+        except Exception as ex:
+            output("VCS request failed. Reason: %s", ex)
