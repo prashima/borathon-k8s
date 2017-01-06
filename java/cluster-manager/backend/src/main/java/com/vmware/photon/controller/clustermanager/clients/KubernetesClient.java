@@ -114,47 +114,52 @@ public class KubernetesClient {
    * @param callback                  callback that is invoked on completion of the operation.
    * @throws IOException
    */
-  public void getNodeAddressesAsync(
-      final String connectionString,
-      final FutureCallback<Set<String>> callback) throws IOException {
+	public void getNodeAddressesAsync(final String connectionString, final FutureCallback<Set<String>> callback)
+			throws IOException {
 
-    // final RestClient restClient = new RestClient(connectionString, this.httpClient);
+		final RestClient restClient = new RestClient(connectionString, this.httpClient);
 
-    FutureCallback<Nodes> futureCallback =
-        new FutureCallback<Nodes>() {
-          @Override
-          public void onSuccess(Nodes result) {
+		org.apache.http.concurrent.FutureCallback futureCallback = new org.apache.http.concurrent.FutureCallback<HttpResponse>() {
+			@Override
+			public void completed(HttpResponse result) {
 
-//            Nodes response = null;
-//            try {
-//
-//            } catch (Throwable e) {
-//              callback.onFailure(e);
-//              return;
-//            }
+				Nodes response = null;
+				try {
+					restClient.checkResponse(result, HttpStatus.SC_OK);
+					response = objectMapper.readValue(result.getEntity().getContent(), new TypeReference<Nodes>() {
+					});
+				} catch (Throwable e) {
+					callback.onFailure(e);
+					return;
+				}
 
-            Set<String> nodes = new HashSet<>();
-            if (result != null && result.getItems() != null) {
-              for (Node n : result.getItems()) {
-                if (n.status != null && n.status.addresses != null) {
-                  for (NodeAddress a : n.status.addresses) {
-                    nodes.add(a.address);
-                  }
-                }
-              }
-            }
+				Set<String> nodes = new HashSet();
+				if (response != null && response.items != null) {
+					for (Node n : response.items) {
+						if (n.status != null && n.status.addresses != null) {
+							for (NodeAddress a : n.status.addresses) {
+								nodes.add(a.address);
+							}
+						}
+					}
+				}
 
-            callback.onSuccess(nodes);
-          }
+				callback.onSuccess(nodes);
+			}
 
-          @Override
-          public void onFailure(Throwable ex) {
-            callback.onFailure(ex);
-          }
-        };
+			@Override
+			public void failed(Exception ex) {
+				callback.onFailure(ex);
+			}
 
-        GeneralApiClient.getAsync(connectionString + GET_NODES_PATH, Nodes.class, futureCallback);
-  }
+			@Override
+			public void cancelled() {
+				callback.onFailure(new RuntimeException("getNodeAddressesAsync was cancelled"));
+			}
+		};
+
+		restClient.performAsync(RestClient.Method.GET, GET_NODES_PATH, null, futureCallback);
+	}
 
   /**
    * This method calls into the Kubernetes API endpoint to retrieve the hostnames of slave nodes.

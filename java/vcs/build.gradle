@@ -25,8 +25,17 @@ distributions {
             from ('../cluster-manager/backend/src/main/resources/scripts') {
                 into 'scripts'
             }
+            from ('../../scripts/checkKubeStatus') {
+                into 'scripts'
+            }
+            from ('../../scripts/kubectl') {
+                into 'scripts'
+            }
             from ('src/main/resources/scripts') {
                 into 'scripts'
+            }
+            from ('src/main/resources/demo') {
+                into 'demo'
             }
         }
     }
@@ -61,4 +70,4 @@ dependencies {
     testCompile 'junit:junit:4.12'
 }
 mainClassName = "com.vmware.vcs.core.Main"
-applicationDefaultJvmArgs = ["-Dvsphere-client-properties=vsphere-client.properties –Dssl.trustAll.enabled=true"]
+applicationDefaultJvmArgs = ["-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=20001 -Dvsphere-client-properties=vsphere-client.properties –Dssl.trustAll.enabled=true"]

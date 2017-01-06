@@ -37,10 +37,10 @@ public class EtcdStatusChecker implements StatusChecker {
   @Override
   public void checkNodeStatus(final String nodeAddress,
                               final FutureCallback<Boolean> callback) {
-    logger.info("Checking Etcd: {}", nodeAddress);
+    logger.info("Checking Etcd, IP: {}", nodeAddress);
     // TODO : Adding a hack to send success
-    callback.onSuccess(true);
-    /*
+    //callback.onSuccess(true);
+    
     try {
       String connectionString = createConnectionString(nodeAddress);
       etcdClient.checkStatus(connectionString, new FutureCallback<Boolean>() {
@@ -63,7 +63,7 @@ public class EtcdStatusChecker implements StatusChecker {
     } catch (Exception e) {
       logger.warn("Etcd call failed: ", e);
       callback.onSuccess(false);
-    }*/
+    }
   }
 
   private static String createConnectionString(String serverAddress) {
