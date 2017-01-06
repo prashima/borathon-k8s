@@ -19,7 +19,7 @@ import subprocess
 SPACES = 2
 
 
-def create(header, data):
+def create(header, data, print_header=True):
     """
     Create a printable ascii table as a string and return it
     @param header - a list of strings for naming columns
@@ -36,7 +36,7 @@ def create(header, data):
     sizes = shrink_to_fit(max_sizes, width)
     header = truncate([header], sizes)[0]
     data = truncate(data, sizes)
-    return format_table2string(header, data, sizes)
+    return format_table2string(header, data, sizes, print_header)
 
 
 def term_width():
@@ -124,13 +124,16 @@ def shrink_to_fit(column_sizes, terminal_width):
     return column_sizes
 
 
-def format_table2string(header, data, sizes):
+def format_table2string(header, data, sizes, print_header):
     """ Actually create the table as a string """
-    s = value_row(header, sizes) + '\n'
-    s = s + divider_row(sizes) + '\n'
+    if print_header:
+        s = value_row(header, sizes) + '\n'
+        s = s + divider_row(sizes) + '\n'
+    else:
+        s = ""
     for row in data:
         s = s + value_row(row, sizes) + '\n'
-    return s
+    return s[:-1]
 
 
 def value_row(values, sizes):

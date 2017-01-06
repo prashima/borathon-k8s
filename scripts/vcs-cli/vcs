@@ -37,7 +37,6 @@ import os
 import os.path
 import sys
 import argparse
-import json
 
 import cli_table
 
@@ -182,13 +181,24 @@ def commands():
                 },
                 'ls': {
                     'func': cluster_ls,
+                    'args': {
+                        '-c': {
+                            'help': 'Display selected columns',
+                            'choices': all_ls_headers(),
+                            'metavar': 'Col1,Col2,...'
+                            },
+                        '-q': {
+                            'help': 'Do not print headers',
+                            'action': 'store_true'
+                        }
+                    },
                     'help': 'List clusters managed by VCS'
                 }
             }
         },
-        'status': {
-            'func': vcs_status,
-            'help': 'Show the status of the VCS service'
+        'info': {
+            'func': vcs_info,
+            'help': 'Show information about the VCS service'
         }
     }
 
@@ -268,14 +278,13 @@ def output(fmt_string, *args):
 
 # Command line implementations.
 
-# First line to be printed by the command on each invocation  
-INFO = "vSphere Container Service admin command line v0.1"
+# First line to be printed for statu  
+CLI_INFO = "vSphere Container Service admin command line v0.1"
 
 # paths to be used in URLs
 CLUSTERS_PATH = "/vcs/cloudstore/clusters"
 
 def init():
-    six.print_(INFO)
     # Make sure VCS_HOST is set, and exit if it's not
     try:
         global VCS_HOST
@@ -316,8 +325,10 @@ def cluster_create(args):
             "container_network" : args.container_network
         }
     }
+    output(create_spec)
     url = VCS_HOST + '/vcs/clustermanager/vcs-cluster-create'
     resp = requests.post(url, data=create_spec)
+
     if resp.status_code != 201:
         # This means something went wrong.
         output("Failed to POST to %s. Error %s (%s)", url, resp.status_code, resp.reason)
@@ -333,12 +344,31 @@ def cluster_ls(args):
     if resp.status_code != 200:
         # This means something went wrong. TBD: useful err. msg
         raise Exception(resp.status_code)
-    known_clusters = json.loads(resp.content)['documentLinks']
-    headers = ['Name', 'State', 'Health', 'Slaves', 'ETCD IP', 'Master IP', 'Cont. Network', 'UUID']
+    known_clusters = resp.json()['documentLinks']
+
+    if args.c:
+        headers, rows = ls_dash_c(args.c, known_clusters)
+    else:
+        headers = all_ls_headers()
+        rows = generate_ls_rows(known_clusters)
+
+    if args.q:
+        print_header = False
+    else:
+        print_header=True
+    output(cli_table.create(headers, rows, print_header))
+
+def all_ls_headers():
+    """ Return a list of all header for ls -l """
+    return ['Name', 'State', 'Health', 'Slaves', 'ETCD_IP',\
+            'Master_IP', 'Cont_Network', 'UUID']
+
+def generate_ls_rows(known_clusters):
+    """ Gather all cluster info into rows that can be used to format a table """
     rows = []
     for cluster in known_clusters:
         resp = requests.get(VCS_HOST + cluster)
-        cluster_info = json.loads(resp.content)
+        cluster_info = resp.json()
         ext_info = cluster_info['extendedProperties']
         rows.append([
             cluster_info['clusterName'],
@@ -350,7 +380,24 @@ def cluster_ls(args):
             ext_info['container_network'],
             os.path.basename(cluster_info['documentSelfLink'])
         ])
-    output(cli_table.create(headers, rows))
+    return rows
+
+
+def ls_dash_c(columns, clusters):
+    """ Return only the columns requested in the format required for table construction """
+    all_headers = all_ls_headers()
+    all_rows = generate_ls_rows(clusters)
+    indexes = []
+    headers = []
+    choices = commands()['cluster']['cmds']['ls']['args']['-c']['choices']
+    for i in range(len(choices)):
+        if choices[i] in columns:
+            indexes.append(i)
+            headers.append(all_headers[i])
+    rows = []
+    for row in all_rows:
+        rows.append([row[i] for i in indexes])
+    return (headers, rows)
 
 
 def cluster_rm(args):
@@ -368,12 +415,13 @@ def cluster_scale(args):
     """Re-configures a cluster based on the new config passed in args"""
     output("Scaling cluster '%s' to %d slaves. (NOT IMPLEMENTED YET)", args.name, args.slaves)
 
-def vcs_status(args):
+def vcs_info(args):
     """Reports overall status of VCS service"""
+    output(CLI_INFO)
     resp = requests.get(VCS_HOST)
     if resp.status_code != 200:
         output("No response from %s", VCS_HOST)
-    elif CLUSTERS_PATH not in json.loads(resp.content)['documentLinks']:
+    elif CLUSTERS_PATH not in resp.json()['documentLinks']:
         output("VCS seems down - it's missing from services list on %s", VCS_HOST)
     else:
         output("VCS is certainly up, and hopefully healthy on %s", VCS_HOST)
