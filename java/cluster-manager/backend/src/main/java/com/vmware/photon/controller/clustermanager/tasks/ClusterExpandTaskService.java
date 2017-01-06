@@ -283,6 +283,8 @@ public class ClusterExpandTaskService extends StatefulService {
 		  input.nodeProperties = KubernetesWorkerNodeTemplate
 						.createProperties(etcdIps, cn, masterIp, sshKey, caCert);
           input.nodeType = NodeType.KubernetesSlave;
+          input.ipEtcd = etcdIps.get(0);
+          input.ipMaster = masterIp;
           break;
         }
         case MESOS: {

@@ -20,6 +20,7 @@ public class VcsProperties extends Properties {
 	private static String DOCKER_ENGINE_IP = "dockerEngineIp";
 	private static String DOCKER_ENGINE_PORT = "dockerEnginePort";
 	private static String DOCKER_BINARY = "dockerBinary";
+	private static String K8S_IMAGE = "k8sImage";
 
 	public static synchronized void init(String file) throws Exception {
 		logger.info("Initializing VcsProperties with {}", file);
@@ -90,5 +91,12 @@ public class VcsProperties extends Properties {
 			throw new RuntimeException("dockerBinary not initialized!!");
 		}
 		return instance.getProperty(DOCKER_BINARY, "/usr/local/bin/docker");
+	}
+	
+	public static String getK8sImage() {
+		if (instance == null) {
+			throw new RuntimeException("k8sImage not initialized!!");
+		}
+		return instance.getProperty(K8S_IMAGE, "luomiao/vcs-k8s-node:v0.3");
 	}
 }

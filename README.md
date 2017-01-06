@@ -36,6 +36,10 @@ unzip vcs-vcs0.1-13e58dc.zip
 
 mv vcs-vcs0.1-13e58dc vcs
 
+* Remove the zip file to save disk space since there is very limited disk space in VCH VM
+
+rm vcs-vcs0.1-13e58dc.zip
+
 * Run VCS after editing config/vcs.properties with correct properties (give proper value for dockerEngineIp property)
 
 cd vcs/scripts/

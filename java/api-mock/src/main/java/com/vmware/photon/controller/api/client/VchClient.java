@@ -25,9 +25,9 @@ import com.vmware.vsphere.client.commands.VmNetwork.Network;
 public class VchClient {
 
 	public static enum NodeType {
-		KubernetesEtcd("luomiao/vcs-k8s-node:v0.1"),
-		KubernetesMaster("luomiao/vcs-k8s-node:v0.1"),
-		KubernetesSlave("luomiao/vcs-k8s-node:v0.1");
+		KubernetesEtcd(VcsProperties.getK8sImage()),
+		KubernetesMaster(VcsProperties.getK8sImage()),
+		KubernetesSlave(VcsProperties.getK8sImage());
 
 		private String imageName;
 		private NodeType(String imageName) {
