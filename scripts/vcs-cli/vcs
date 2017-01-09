@@ -381,6 +381,7 @@ VCS_CLUSTER_PATH = "/vcs/cloudstore/clusters"
 VCS_CLUSTER_CREATE = '/vcs/clustermanager/vcs-cluster-create'
 VCS_CLUSTER_RESIZE = '/vcs/clustermanager/cluster-resize-tasks'
 
+
 def vcs_commands():
     '''This function returns command line definition.
     See commands() function docstring for more details'''
@@ -494,7 +495,7 @@ def vcs_commands():
         }
     }
 
-
+VCS_HOST = "undefined"
 def init():
     '''entry point'''
     # Make sure VCS_HOST is set, and exit if it's not
@@ -521,9 +522,9 @@ def cluster_create(args):
                cluster_type)
         return
 
-    # create and post the request
-    # hardcoded stuff is legacy (from Photon Controller POC)
-    # and eventually need to be dropped from the API
+    # Create and post the request.
+    # Hard coded stuff is legacy (from Photon Controller POC)
+    # and eventually need to be dropped from the API.
     create_spec = {
         "clusterState": "CREATING",
         "clusterName": args.name,
@@ -608,11 +609,11 @@ def ls_dash_c(columns, clusters):
     all_rows = generate_ls_rows(clusters)
     indexes = []
     headers = []
-    choices = commands()['cluster']['cmds']['ls']['args']['-c']['choices']
-    for i in range(len(choices)):
-        if choices[i] in columns:
-            indexes.append(i)
-            headers.append(all_headers[i])
+    for col in enumerate(columns):
+        # parser allows only legal column names, so index() below always succeeds
+        i = all_headers.index(col[1]) # col is a tuple (index, value)
+        indexes.append(i)
+        headers.append(all_headers[i])
     rows = []
     for row in all_rows:
         rows.append([row[i] for i in indexes])
@@ -628,8 +629,8 @@ def cluster_lsvm(args):
 
     headers = ['VM_Name']
     vms = []
-    for v in resp.json():
-        vms.append([v["vmName"]])
+    for vm_info in resp.json():
+        vms.append([vm_info["vmName"]])
     output(CliTable.create(headers, vms, not args.q))
 
 
@@ -661,12 +662,13 @@ def cluster_resize(args):
 def vcs_info(args):
     """Reports overall status of VCS service"""
     output(VCS_CLI_INFO)
+    output("VCS_HOST=%s", VCS_HOST)
     resp = requests.get(VCS_HOST)
     resp.raise_for_status()
     if VCS_CLUSTER_PATH not in resp.json()['documentLinks']:
         output("VCS seems down - it's missing from services list on %s", VCS_HOST)
     else:
-        output("VCS is certainly up, and hopefully healthy on %s", VCS_HOST)
+        output("VCS is up.")
 
 
 if __name__ == '__main__':
@@ -675,7 +677,7 @@ if __name__ == '__main__':
     if cmd_args:
         try:
             cmd_args.func(cmd_args)
-        # TBD: better error handling. Can do in command to provide 
+        # TBD: better error handling. Can do in command to provide
         # individualized info, or here by looking at different Exception
         # types
         except Exception as ex:
