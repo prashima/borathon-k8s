@@ -569,8 +569,8 @@ def cluster_ls(args):
 
 def all_ls_headers():
     """ Return a list of all header for ls -l """
-    return ['Name', 'Type', 'State', 'Health', 'Slave_Count', 'ETCD_IP',
-            'Master_IP', 'UUID']
+    return ['Name', 'Type', 'State', 'Health', 'Reason',
+            'Slaves', 'ETCD_IP', 'Master_IP', 'UUID']
 
 
 def generate_ls_rows(known_clusters):
@@ -580,11 +580,20 @@ def generate_ls_rows(known_clusters):
         resp = requests.get(VCS_HOST + cluster)
         cluster_info = resp.json()
         ext_info = cluster_info['extendedProperties']
+        if cluster_info['clusterState'] == "CREATING":
+            health = "n/a"
+        else:
+            health = cluster_info['clusterhealth']
+        if 'healthTip' in cluster_info:
+            reason = cluster_info['healthTip']
+        else:
+            reason = "n/a"
         rows.append([
             cluster_info['clusterName'],
             cluster_info['clusterType'],
             cluster_info['clusterState'],
-            cluster_info['clusterhealth'],
+            health,
+            reason,
             str(cluster_info['slaveCount']),
             ext_info['etcd_ips'],
             ext_info['master_ip'],
