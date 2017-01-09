@@ -90,7 +90,7 @@ public class VcsKubernetesClusterHealthCheckTaskService extends StatefulService 
 					patchState.clusterhealth = ClusterHealth.RED;
 				}
 				
-				patchState.healthTip="";
+				patchState.healthTip = " ";
 				
 				BufferedReader stdInput = new BufferedReader(new 
 					     InputStreamReader(p.getInputStream()));

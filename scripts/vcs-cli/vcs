@@ -500,7 +500,7 @@ def init():
     # Make sure VCS_HOST is set, and exit if it's not
     try:
         global VCS_HOST
-        VCS_HOST = os.environ['VCS_HOST']
+        VCS_HOST = "http://" + os.environ['VCS_HOST']
     except:
         six.print_("Missing VCS_HOST, please set it before running 'vcs' tool. "
                    "Example: 'VCS_HOST=10.20.1.11:2121 vcs cluster ls'")
