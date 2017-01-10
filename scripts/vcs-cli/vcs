@@ -126,7 +126,9 @@ def add_subparser(parser, cmds_dict):
     """ Recursively add subcommand parsers based on a dictionary of commands """
     subparsers = parser.add_subparsers()
     for cmd, attributes in cmds_dict.items():
-        subparser = subparsers.add_parser(cmd, help=attributes['help'])
+        subparser = subparsers.add_parser(cmd,
+                                          help=attributes['help'],
+                                          description=attributes['help'])
         if 'func' in attributes:
             subparser.set_defaults(func=attributes['func'])
         if 'args' in attributes:
@@ -164,7 +166,7 @@ def make_list_of_values(allowed):
     Take a list of allowed values for an option and return a function that can be
     used to typecheck a string of given values and ensure they match the allowed
     values.  This is required to support options that take comma separated lists
-    such as --type in 'cluster create --type=kubernetes,mesos,swarm'
+    such as --type in 'cluster ls -c UUID,Name'
     """
 
     def list_of_values(string):
@@ -391,7 +393,7 @@ def vcs_commands():
         # cluster {create, update, rm , ls} - manipulates clusters
         #
         'cluster': {
-            'help': 'Manages cluster - creates, removed, modifies',
+            'help': 'Manages a container orchestration cluster (e.g. Kubernetes Cluster)',
             'cmds': {
                 'create': {
                     'func': cluster_create,
@@ -445,7 +447,7 @@ def vcs_commands():
                 },
                 'rm': {
                     'func': cluster_rm,
-                    'help': 'Delete a cluster',
+                    'help': 'Remove a cluster and clean up VMs used for it',
                     'args': {
                         '--uuid': {
                             'help': 'UUID of the cluster to be removed',
@@ -455,6 +457,7 @@ def vcs_commands():
                 },
                 'ls': {
                     'func': cluster_ls,
+                    'help': 'List clusters managed by VCS',
                     'args': {
                         '-c': {
                             'help': 'Display selected columns',
@@ -465,8 +468,7 @@ def vcs_commands():
                             'help': 'Do not print headers',
                             'action': 'store_true'
                         }
-                    },
-                    'help': 'List clusters managed by VCS'
+                    }
                 },
                 'lsvm': {
                     'func': cluster_lsvm,
