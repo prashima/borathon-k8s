@@ -496,6 +496,8 @@ def vcs_commands():
     }
 
 VCS_HOST = "undefined"
+NA = "n/a" # using this when info is not available 
+
 def init():
     '''entry point'''
     # Make sure VCS_HOST is set, and exit if it's not
@@ -573,7 +575,6 @@ def all_ls_headers():
     return ['Name', 'Type', 'State', 'Health', 'Reason',
             'Slaves', 'ETCD_IP', 'Master_IP', 'UUID']
 
-
 def generate_ls_rows(known_clusters):
     """ Gather all cluster info into rows that can be used to format a table """
     rows = []
@@ -581,14 +582,14 @@ def generate_ls_rows(known_clusters):
         resp = requests.get(VCS_HOST + cluster)
         cluster_info = resp.json()
         ext_info = cluster_info['extendedProperties']
-        if cluster_info['clusterState'] == "CREATING":
-            health = "n/a"
+        if cluster_info['clusterState'] in ["CREATING", "RESIZING"]:
+            health = NA
         else:
             health = cluster_info['clusterhealth']
-        if 'healthTip' in cluster_info:
+        if 'healthTip' in cluster_info and health != NA:
             reason = cluster_info['healthTip']
         else:
-            reason = "n/a"
+            reason = NA
         rows.append([
             cluster_info['clusterName'],
             cluster_info['clusterType'],
