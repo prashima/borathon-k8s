@@ -381,6 +381,7 @@ VCS_CLUSTER_PATH = "/vcs/cloudstore/clusters"
 VCS_CLUSTER_CREATE = '/vcs/clustermanager/vcs-cluster-create'
 VCS_CLUSTER_RESIZE = '/vcs/clustermanager/cluster-resize-tasks'
 
+
 def vcs_commands():
     '''This function returns command line definition.
     See commands() function docstring for more details'''
@@ -608,11 +609,11 @@ def ls_dash_c(columns, clusters):
     all_rows = generate_ls_rows(clusters)
     indexes = []
     headers = []
-    choices = commands()['cluster']['cmds']['ls']['args']['-c']['choices']
-    for i in range(len(choices)):
-        if choices[i] in columns:
-            indexes.append(i)
-            headers.append(all_headers[i])
+    for col in enumerate(columns):
+        # parser allows only legal column names, so index() below always succeeds
+        i = all_headers.index(col[1]) # col is a tuple (index, value)
+        indexes.append(i)
+        headers.append(all_headers[i])
     rows = []
     for row in all_rows:
         rows.append([row[i] for i in indexes])
