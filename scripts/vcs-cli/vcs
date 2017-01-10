@@ -495,7 +495,7 @@ def vcs_commands():
         }
     }
 
-
+VCS_HOST = "undefined"
 def init():
     '''entry point'''
     # Make sure VCS_HOST is set, and exit if it's not
@@ -522,9 +522,9 @@ def cluster_create(args):
                cluster_type)
         return
 
-    # create and post the request
-    # hardcoded stuff is legacy (from Photon Controller POC)
-    # and eventually need to be dropped from the API
+    # Create and post the request.
+    # Hard coded stuff is legacy (from Photon Controller POC)
+    # and eventually need to be dropped from the API.
     create_spec = {
         "clusterState": "CREATING",
         "clusterName": args.name,
@@ -629,8 +629,8 @@ def cluster_lsvm(args):
 
     headers = ['VM_Name']
     vms = []
-    for v in resp.json():
-        vms.append([v["vmName"]])
+    for vm_info in resp.json():
+        vms.append([vm_info["vmName"]])
     output(CliTable.create(headers, vms, not args.q))
 
 
@@ -667,7 +667,7 @@ def vcs_info(args):
     if VCS_CLUSTER_PATH not in resp.json()['documentLinks']:
         output("VCS seems down - it's missing from services list on %s", VCS_HOST)
     else:
-        output("VCS is certainly up, and hopefully healthy on %s", VCS_HOST)
+        output("VCS is up on %s", VCS_HOST)
 
 
 if __name__ == '__main__':
@@ -676,7 +676,7 @@ if __name__ == '__main__':
     if cmd_args:
         try:
             cmd_args.func(cmd_args)
-        # TBD: better error handling. Can do in command to provide 
+        # TBD: better error handling. Can do in command to provide
         # individualized info, or here by looking at different Exception
         # types
         except Exception as ex:
