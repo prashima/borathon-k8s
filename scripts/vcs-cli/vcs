@@ -662,12 +662,13 @@ def cluster_resize(args):
 def vcs_info(args):
     """Reports overall status of VCS service"""
     output(VCS_CLI_INFO)
+    output("VCS_HOST=%s", VCS_HOST)
     resp = requests.get(VCS_HOST)
     resp.raise_for_status()
     if VCS_CLUSTER_PATH not in resp.json()['documentLinks']:
         output("VCS seems down - it's missing from services list on %s", VCS_HOST)
     else:
-        output("VCS is up on %s", VCS_HOST)
+        output("VCS is up.")
 
 
 if __name__ == '__main__':
