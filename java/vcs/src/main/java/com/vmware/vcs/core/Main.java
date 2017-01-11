@@ -3,6 +3,7 @@ package com.vmware.vcs.core;
 import java.net.InetSocketAddress;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.slf4j.Logger;
@@ -11,6 +12,8 @@ import org.slf4j.LoggerFactory;
 import com.vmware.photon.controller.clustermanager.ClusterManagerFactory;
 import com.vmware.photon.controller.clustermanager.VcsHelper;
 import com.vmware.photon.controller.clustermanager.servicedocuments.ClusterManagerConstants;
+import com.vmware.photon.controller.clustermanager.tasks.VcsKubernetesClusterHealthCheckFactoryService;
+import com.vmware.photon.controller.clustermanager.tasks.VcsKubernetesClusterHealthCheckTaskService;
 import com.vmware.photon.controller.common.clients.AgentControlClientFactory;
 import com.vmware.photon.controller.common.clients.HostClientFactory;
 import com.vmware.photon.controller.common.logging.LoggingConfiguration;
@@ -20,6 +23,13 @@ import com.vmware.photon.controller.common.thrift.StaticServerSet;
 import com.vmware.photon.controller.common.thrift.ThriftModule;
 import com.vmware.photon.controller.common.utils.VcsProperties;
 import com.vmware.photon.controller.common.xenon.ServiceHostUtils;
+import com.vmware.photon.controller.common.xenon.ServiceUriPaths;
+import com.vmware.photon.controller.common.xenon.exceptions.BadRequestException;
+import com.vmware.photon.controller.common.xenon.exceptions.DocumentNotFoundException;
+import com.vmware.photon.controller.mockcloudstore.xenon.entity.ClusterServiceFactory;
+import com.vmware.photon.controller.xenon.client.VcsXenonRestClient;
+import com.vmware.xenon.common.Operation;
+import com.vmware.xenon.common.ServiceDocumentQueryResult;
 import com.vmware.xenon.common.ServiceHost;
 import com.vmware.xenon.common.ServiceHost.Arguments;
 import com.vmware.xenon.common.UriUtils;
@@ -47,7 +57,21 @@ public class Main {
 		        LoggingFactory.detachAndStop();
 		      }
 		    });
+	
+		initialize();
+	}
 
+	private static void initialize() throws Throwable {
+		logger.info("Initializing VCS");
+		Operation op = VcsXenonRestClient.getVcsRestClient().get(
+	            VcsKubernetesClusterHealthCheckFactoryService.SELF_LINK);
+		ServiceDocumentQueryResult result = op.getBody(ServiceDocumentQueryResult.class);
+		if (result.documentCount != 0) {
+			logger.info("Health check already configured.");
+			return;
+		}
+		VcsKubernetesClusterHealthCheckTaskService.State state = new VcsKubernetesClusterHealthCheckTaskService.State();
+		VcsXenonRestClient.getVcsRestClient().post(VcsKubernetesClusterHealthCheckFactoryService.SELF_LINK, state);
 	}
 
 	private static ServiceHost startXenonHost(ThriftModule thriftModule) throws Throwable {

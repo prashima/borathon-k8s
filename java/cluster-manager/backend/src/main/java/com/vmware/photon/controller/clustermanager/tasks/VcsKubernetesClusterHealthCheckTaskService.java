@@ -15,6 +15,7 @@ import com.vmware.xenon.common.ServiceDocument;
 import com.vmware.xenon.common.ServiceDocumentQueryResult;
 import com.vmware.xenon.common.StatefulService;
 import com.vmware.photon.controller.api.model.ClusterHealth;
+import com.vmware.photon.controller.api.model.ClusterState;
 import com.vmware.photon.controller.clustermanager.utils.HostUtils;
 import com.vmware.photon.controller.common.utils.VcsProperties;
 import com.vmware.photon.controller.common.xenon.ServiceUriPaths;
@@ -73,6 +74,11 @@ public class VcsKubernetesClusterHealthCheckTaskService extends StatefulService 
 					continue;
 				}
 				ClusterService.State cluster = op.getBody(ClusterService.State.class);
+				if (cluster.clusterState != ClusterState.READY) {
+					ServiceUtils.logInfo(this, "Cluster state of cluster %s is %s so ignoring health check",
+							cluster.clusterName, cluster.clusterState);
+					continue;
+				}
 				String masterIp = cluster.extendedProperties.get("master_ip");
 				ServiceUtils.logInfo(this, "%s: MasterIP = %s, numberSlaves = %d", clusterDocLink, masterIp, cluster.slaveCount);
 				
