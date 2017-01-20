@@ -6,6 +6,7 @@ There are 2 ways of deploying VCS in VCH -
 -- VCS runs as a separate service along side VIC engine in the same VM
 * Deploying VCS as a container VM on VIC engine
 -- VCS runs as a container VM outside VCH VM.
+
 ## Installation of VCS in vSphere Container Host(VCH) VM
 * Deploy VCH to a Basic vCenter Server Cluster - https://vmware.github.io/vic-product/assets/files/html/0.8/vic_installation/deploy_vch_vcenter.html
 Here's a sample command to create VCH -
@@ -67,12 +68,16 @@ Example: docker --tls run --name vcs -dit -p 19000:19000 sandeeppissay/vcs:v0.3 
 
 # Download vcs client tool
 wget https://raw.githubusercontent.com/prashima/borathon-k8s/vcs0.1/scripts/vcs-cli/vcs
+
 chmod +x vcs
 
 # Test VCS is running
 export VCS_HOST=10.192.67.93:19000
+
 vcs info
+
 vcs --help
+
 vcs cluster ls
 
 # Create a simple k8s cluster
@@ -86,6 +91,7 @@ docker --tls ps
 
 # Deploy a demo app (login to VCH VM and then run the commands)
 ./kubectl -s 172.16.0.21:8080 create -f ../demo/nginx-demo.yaml
+
 ./kubectl -s 172.16.0.11:8080 describe pod demo-1
 
 # Resize the k8s cluster
@@ -96,7 +102,6 @@ docker --tls stop worker-177321dd-05bd-49f7-a4b4-6a40b8f6202b
 
 # Check health
 vcs cluster ls
-
 
 # Building and importing project in eclipse
 * Clone this repo and go to java directory> cd [project-dir]/vcs-proto1/java
@@ -112,4 +117,3 @@ vcs cluster ls
 * The main class for this service is com.vmware.vcs.core.Main. Run this as Java application with the following program and VM arguments.
   * Under program arguments specify “java/common/src/main/resources/vcs.properties” file as an argument.
   * Under VM arguments specify “-Dvsphere-client-properties=vsphere-client.properties –Dssl.trustAll.enabled=true”
-
