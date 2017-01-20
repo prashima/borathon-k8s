@@ -1,6 +1,12 @@
 This is a prototype of kubernetes deployment on vCenter using vSphere Integrated Containers.
 
-# Installation and running vSphere Container Service (VCS) in vSphere Container Host(VCH) VM
+# Installation of vSphere Container Service (VCS) in vSphere Container Host (VCH)
+There are 2 ways of deploying VCS in VCH -
+* Installing VCS inside VCH VM
+-- VCS runs as a separate service along side VIC engine in the same VM
+* Deploying VCS as a container VM on VIC engine
+-- VCS runs as a container VM outside VCH VM.
+## Installation of VCS in vSphere Container Host(VCH) VM
 * Deploy VCH to a Basic vCenter Server Cluster - https://vmware.github.io/vic-product/assets/files/html/0.8/vic_installation/deploy_vch_vcenter.html
 Here's a sample command to create VCH -
 
@@ -46,44 +52,51 @@ cd vcs/scripts/
 
 nohup ./start_vcs.sh 2>&1 > ~/vcs.log &
 
-# Using this service
-Users will need REST API client to interacte with this service.
+## Deploying VCS as a container VM on VIC engine
+* Create VCH
+vic-machine-windows.exe create --name vcs-vch  --target 10.192.71.215/VSAN-DC --compute-resource VSAN-Cluster --user "Administrator@vsphere.local" --bridge-network vic-bridge --image-store vsanDatastore/vcs-vch --no-tlsverify --force --timeout 15m0s
 
-* GET http://127.0.0.1:19000/
-  * Lists various services running within this service. Most of which are not of any use at this point. Except for the ones listed below.
+* Using the VIC engine
+export DOCKER_API_VERSION=1.23
+export DOCKER_HOST=10.192.67.93:2376
+docker --tls ps -a
 
-* GET http://127.0.0.1:19000/vcs/cloudstore/clusters
-  * Lists all clusters created with this service.
+* Deploying VCS as container VM in VIC
+docker --tls run --name vcs -dit -p 19000:19000 sandeeppissay/vcs:v0.3 <VCH VM IP>
+Example: docker --tls run --name vcs -dit -p 19000:19000 sandeeppissay/vcs:v0.3 10.192.67.93
 
-* DELETE http://127.0.0.1:19000/vcs/cloudstore/clusters/<cluster-uuid>
-  * Deletes the cluster.
+# Download vcs client tool
+wget https://raw.githubusercontent.com/prashima/borathon-k8s/vcs0.1/scripts/vcs-cli/vcs
+chmod +x vcs
 
-* POST http://127.0.0.1:19000/vcs/clustermanager/vcs-cluster-create
-  * Creates a kubernestes cluster as per the passed arguments passed and set in the properties files.
-  * Sample Body
+# Test VCS is running
+export VCS_HOST=10.192.67.93:19000
+vcs info
+vcs --help
+vcs cluster ls
 
-``` json
- { "clusterState" : "CREATING",
-   "clusterName" : "cluster1", 
-   "clusterType" : "KUBERNETES", 
-   "imageId" : "Kubernetes-image.vmdk", 
-   "projectId" : "k8s-project", 
-   "vmNetworkId" : "VM Network", 
-   "diskFlavorName" : "Disk flavor", 
-   "masterVmFlavorName" : "Master flavor", 
-   "otherVmFlavorName" : "Slave Flavor", 
-   "slaveCount" : "1", 
-   "extendedProperties" : { 
-      "etcd_ips" : "10.20.104.90", 
-      "dns" : "10.20.145.1", 
-      "gateway" : "10.20.107.253", 
-      "netmask" : "255.255.252.0", 
-      "master_ip" : "10.20.104.92", 
-      "container_network" : "10.20.0.1/20" 
-     } 
-  }
-```
-  * Modify clusterName, etcd_ips, dns, gateway, netmask, master_ip to appropriate values as per your setup.
+# Create a simple k8s cluster
+vcs cluster create --name=k8s-3 --type=KUBERNETES --etcd_ips=172.16.0.30 --master_ip=172.16.0.31 --slave_count=1
+
+# List container VMS under the cluster
+vcs cluster lsvm --uuid=<uuid>
+
+# List the container VMs from VIC
+docker --tls ps
+
+# Deploy a demo app (login to VCH VM and then run the commands)
+./kubectl -s 172.16.0.21:8080 create -f ../demo/nginx-demo.yaml
+./kubectl -s 172.16.0.11:8080 describe pod demo-1
+
+# Resize the k8s cluster
+vcs cluster resize --uuid=<uuid> --slave_count=2
+
+# Stop one of the slave
+docker --tls stop worker-177321dd-05bd-49f7-a4b4-6a40b8f6202b
+
+# Check health
+vcs cluster ls
+
 
 # Building and importing project in eclipse
 * Clone this repo and go to java directory> cd [project-dir]/vcs-proto1/java
