@@ -55,15 +55,21 @@ nohup ./start_vcs.sh 2>&1 > ~/vcs.log &
 
 ## Deploying VCS as a container VM on VIC engine
 * Create VCH
+
 vic-machine-windows.exe create --name vcs-vch  --target 10.192.71.215/VSAN-DC --compute-resource VSAN-Cluster --user "Administrator@vsphere.local" --bridge-network vic-bridge --image-store vsanDatastore/vcs-vch --no-tlsverify --force --timeout 15m0s
 
 * Using the VIC engine
+
 export DOCKER_API_VERSION=1.23
+
 export DOCKER_HOST=10.192.67.93:2376
+
 docker --tls ps -a
 
 * Deploying VCS as container VM in VIC
+
 docker --tls run --name vcs -dit -p 19000:19000 sandeeppissay/vcs:v0.3 <VCH VM IP>
+
 Example: docker --tls run --name vcs -dit -p 19000:19000 sandeeppissay/vcs:v0.3 10.192.67.93
 
 # Download vcs client tool
@@ -90,7 +96,7 @@ vcs cluster lsvm --uuid=<uuid>
 docker --tls ps
 
 # Deploy a demo app (login to VCH VM and then run the commands)
-./kubectl -s 172.16.0.21:8080 create -f ../demo/nginx-demo.yaml
+./kubectl -s 172.16.0.21:8080 create -f nginx-demo.yaml
 
 ./kubectl -s 172.16.0.11:8080 describe pod demo-1
 
